@@ -9,6 +9,7 @@ import { countdown } from '../ui/countdown.js';
 import { sfx } from '../audio/sfx.js';
 import { lobbyHTML, optHTML, celebrate, versusFinaleHTML, finaleButtons } from './common.js';
 import { camShell, camController, camBoot, waitPlayers, missingText, drawSkeleton, tag, PCOL } from './cam.js';
+import { announcer } from '../audio/announcer.js';
 
 const TINTS = ['#9fdcff', '#ffc2dc', '#c6f28e', '#ffe08a', '#d6c4ff', '#9ff0d6'];
 const PTS = { normal: 1, gold: 3, bomb: -3 };
@@ -73,6 +74,7 @@ export function mount(view, { game, navigate }) {
     const secs = Number(cfg.secs);
     g = { over: false, bubbles: [], bits: [], texts: [], stats: [[0, 0, 0], [0, 0, 0]], spawnAt: 0, t0: 0, left: secs, running: false };
     scoreboard.show({ mode: 'versus', mid: `${secs} sn` });
+    announcer.preload(['go-patlat', 'cd-3', 'cd-2', 'cd-1', 'gold', 'bomb', 'timeup']);
     const scene = stage.show(html`
       <div class="hud-top" data-in><div class="pop-clock" data-clock>${secs}</div></div>
       <div class="hud-bottom"><p class="hud-warn" data-warn></p></div>`, {}, { className: 'hud' });
@@ -80,7 +82,7 @@ export function mount(view, { game, navigate }) {
     const warn = scene.querySelector('[data-warn]');
     cam.draw = (gx, players, dt, t) => drawWorld(gx, players, dt, t);
     cam.onFrame = () => { warn.textContent = missingText(cam); };
-    await countdown(scene, life, { final: 'Patlat!' });
+    await countdown(scene, life, { final: 'Patlat!', voice: 'go-patlat' });
     g.running = true;
     g.t0 = performance.now();
     g.spawnAt = 0;
@@ -103,6 +105,7 @@ export function mount(view, { game, navigate }) {
         clearInterval(timer);
         g.running = false;
         sfx.whistle();
+        announcer.say('timeup');
         clock.textContent = 'Süre!';
         scoreboard.setMid('Süre Doldu');
         life.timeout(() => final(), 1400);
@@ -130,9 +133,11 @@ export function mount(view, { game, navigate }) {
     g.stats[who][b.type === 'gold' ? 1 : b.type === 'bomb' ? 2 : 0]++;
     if (b.type === 'bomb') {
       sfx.boom();
+      announcer.react('bomb');
       shell.card.animate([{ transform: 'translate(0,0)' }, { transform: 'translate(-10px,6px)' }, { transform: 'translate(8px,-6px)' }, { transform: 'translate(0,0)' }], { duration: 320 });
     } else if (b.type === 'gold') {
       sfx.sparkle();
+      announcer.react('gold');
     } else {
       sfx.pop(0.8 + Math.random() * 0.5);
     }
@@ -284,7 +289,8 @@ export function mount(view, { game, navigate }) {
     cam.onFrame = null;
     cam.draw = null;
     const scores = scoreboard.scores;
-    const { html: podium } = versusFinaleHTML(scores, { lines: { tie: 'Berabere! Baloncuklar Eşit Paylaşıldı' } });
+    const { html: podium, winner } = versusFinaleHTML(scores, { lines: { tie: 'Berabere! Baloncuklar Eşit Paylaşıldı' } });
+    announcer.winner(winner);
     const stat = (i) => html`
       <div class="pop-stat p${i}">
         <span class="duo-name ${i ? 'name-p2' : 'name-p1'}">${nameOf(i)}</span>

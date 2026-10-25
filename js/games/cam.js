@@ -5,6 +5,7 @@ import { nameOf } from '../lib/store.js';
 import { icon } from '../ui/icons.js';
 import { PLAYER_COLORS } from '../ui/avatar.js';
 import { sfx } from '../audio/sfx.js';
+import { announcer } from '../audio/announcer.js';
 import { getTask, openCamera, closeCamera, camErrorText, Tracker } from '../vision/vision.js';
 
 export const PCOL = PLAYER_COLORS;
@@ -176,6 +177,7 @@ export function camController(shell, life) {
   };
 
   life.add(() => {
+    announcer.stop();
     cancelAnimationFrame(raf);
     ro.disconnect();
     mo.disconnect();
@@ -263,7 +265,9 @@ export function waitPlayers(stage, life, cam, { title = 'Kadraja Geçin', tip = 
   const go = () => {
     if (gone) return;
     gone = true;
-    onReady();
+    // "Hadi bakalım!" bitmeden geri sayım başlamasın
+    announcer.say('letsgo');
+    life.timeout(() => { if (stage.scene === scene) onReady(); }, 900);
   };
   const tick = () => {
     if (stage.scene !== scene || gone) return;
@@ -282,6 +286,7 @@ export function waitPlayers(stage, life, cam, { title = 'Kadraja Geçin', tip = 
       btn.classList.add('nudge');
       since = now;
       sfx.ding();
+      announcer.react('ready');
     } else if (!both && !btn.disabled) {
       btn.disabled = true;
       btn.classList.remove('nudge');
@@ -305,33 +310,6 @@ export function missingText(cam, who = [0, 1]) {
   if (!gone.length) return '';
   if (gone.length === 2) return 'İkinizi de göremiyorum!';
   return `${nameOf(gone[0])} görünmüyor!`;
-}
-
-/* ---------- Sesli komut ---------- */
-
-// Türkçe ses varsa komutu yüksek sesle okur; oyuncular ekrandan uzakta durur
-let trVoice = null;
-// Chrome ses listesini geç doldurur; ilk çağrı listeyi hazırlatır
-if (window.speechSynthesis) window.speechSynthesis.getVoices();
-export function say(text) {
-  const synth = window.speechSynthesis;
-  if (!synth || !window.SpeechSynthesisUtterance) return;
-  if (!trVoice) trVoice = synth.getVoices().find((v) => /^tr/i.test(v.lang)) || null;
-  if (!trVoice) return;
-  try {
-    synth.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.voice = trVoice;
-    u.lang = trVoice.lang;
-    u.rate = 1.08;
-    u.pitch = 1.15;
-    synth.speak(u);
-  } catch {
-    // Ses okunamazsa oyun sessiz devam eder
-  }
-}
-export function hush() {
-  if (window.speechSynthesis) window.speechSynthesis.cancel();
 }
 
 /* ---------- Çizim yardımcıları ---------- */

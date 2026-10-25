@@ -12,6 +12,7 @@ import { sfx } from '../audio/sfx.js';
 import { burst } from '../fx/confetti.js';
 import { lobbyHTML, optHTML, celebrate, versusFinaleHTML, pSpan } from './common.js';
 import { camShell, camController, camBoot, waitPlayers, drawFaceFrame, meter, PCOL, albumStripHTML, downloadAlbum } from './cam.js';
+import { announcer } from '../audio/announcer.js';
 import { blinkOf, smileOf } from '../vision/faces.js';
 
 const CALIB_MS = 1600;
@@ -77,6 +78,7 @@ export function mount(view, { game, navigate }) {
   function play() {
     const bestOf = Number(cfg.bestOf);
     g = { round: 0, need: Math.ceil(bestOf / 2), bestOf, album: [], over: false };
+    announcer.preload(['go-bakis', 'cd-3', 'cd-2', 'cd-1', 'blinked', 'laughed', 'ran']);
     scoreboard.show({ mode: 'versus', mid: `Tur 1` });
     round();
   }
@@ -121,7 +123,7 @@ export function mount(view, { game, navigate }) {
       smile: Math.min(0.45, median(s)),
     }));
     tip.textContent = 'Göz kırpmak yasak!';
-    await countdown(scene, life, { final: 'Bakış!' });
+    await countdown(scene, life, { final: 'Bakış!', voice: 'go-bakis' });
     duel(base);
   }
 
@@ -152,6 +154,7 @@ export function mount(view, { game, navigate }) {
       const img = p ? cam.snapshot(p.box, 0.5) : null;
       cam.flash();
       sfx.buzzer();
+      announcer.say(why === 'blink' ? 'blinked' : why === 'laugh' ? 'laughed' : 'ran');
       g.album.push({ img, cap: WHY[why], by: nameOf(who), color: PCOL[who] });
       life.timeout(() => result(who, why, sec, img), 650);
     };
@@ -230,7 +233,8 @@ export function mount(view, { game, navigate }) {
     g.over = true;
     cam.onFrame = null;
     cam.draw = null;
-    const { html: podium } = versusFinaleHTML(scoreboard.scores, { lines: { tie: 'Berabere! Gözler Eşit Güçlü' } });
+    const { html: podium, winner } = versusFinaleHTML(scoreboard.scores, { lines: { tie: 'Berabere! Gözler Eşit Güçlü' } });
+    announcer.winner(winner);
     const album = g.album.filter((a) => a.img);
     stage.show(html`
       ${podium}

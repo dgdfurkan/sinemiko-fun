@@ -18,6 +18,7 @@ import { burst } from '../fx/confetti.js';
 import { HUM_CATS } from '../data/voice.js';
 import { lobbyHTML, optHTML, FIRST_OPTIONS, coinFlip, celebrate, versusFinaleHTML, finaleButtons, other, pSpan, shakeEl } from './common.js';
 import { micGate, clipCardHTML, wireClip, miniPlayer, recordScene, pickCardScene } from './mic.js';
+import { songHelper } from './songhelp.js';
 
 const MAX_TRIES = 3;
 const initials = (t) => t.split(' ').map((w) => (w ? `${w[0]}${'_'.repeat(Math.max(0, [...w].length - 1))}` : w)).join(' ');
@@ -27,6 +28,8 @@ export function mount(view, { game, navigate }) {
   view.innerHTML = '<section class="screen game game-hum"><div class="stage"></div></section>';
   const stage = new Stage(view.querySelector('.stage'), life);
   const rec = new VoiceRecorder();
+  // Mırıldanan şarkıyı hatırlamazsa kesit ve sözlere bakabilir; tahminci görmez
+  const helper = songHelper(view.querySelector('.game-hum'), life);
   life.add(() => {
     rec.close();
     stopClip();
@@ -39,6 +42,7 @@ export function mount(view, { game, navigate }) {
 
   function lobby() {
     g = null;
+    helper.hide();
     music.duck('hum', false);
     scoreboard.hide();
     const scene = stage.show(lobbyHTML({
@@ -81,7 +85,7 @@ export function mount(view, { game, navigate }) {
 
   function buildDeck() {
     const cats = HUM_CATS.filter((c) => cfg.cats.has(c.id));
-    return shuffle(cats.flatMap((c) => c.items.map(([text, hint]) => ({ text, hint, cat: c.name }))));
+    return shuffle(cats.flatMap((c) => c.items.map(([text, hint, it, lr]) => ({ text, hint, it, lr, cat: c.name }))));
   }
 
   function drawCard() {
@@ -92,6 +96,7 @@ export function mount(view, { game, navigate }) {
   function newRound() {
     const singer = (g.first + g.round) % 2;
     g.cur = { singer, guesser: other(singer), song: drawCard(), clip: null, play: null, hints: 0, wrongs: 0, judged: false };
+    helper.hide();
     scoreboard.setMid(`Tur ${g.round + 1} / ${g.total}`);
     scoreboard.setActive(singer);
     music.duck('hum', false);
@@ -110,6 +115,7 @@ export function mount(view, { game, navigate }) {
 
   function pickSong() {
     const c = g.cur;
+    helper.show(c.song);
     pickCardScene(stage, {
       hand: `${nameOf(c.singer)}, bu şarkıyı mırıldanacaksın`,
       item: c.song,
@@ -118,6 +124,7 @@ export function mount(view, { game, navigate }) {
       customCat: 'Kendi Şarkın',
       customPlaceholder: 'Hangi şarkı?',
       goLabel: 'Mırıldanmaya Geç',
+      onChange: (it) => helper.show(it),
       onGo: (it) => {
         c.song = it;
         record();
@@ -127,12 +134,15 @@ export function mount(view, { game, navigate }) {
 
   function record() {
     const c = g.cur;
+    helper.show(c.song);
+    helper.setRecording(false);
     recordScene(stage, life, rec, {
       who: c.singer,
       heading: 'Sözsüz Mırıldan',
       extra: html`<div class="say-chip" data-in>${c.song.text}</div><p class="t-hand" data-in>Mmm, na na ya da la la. Şarkı sözü söylemek yok!</p>`,
       duckKey: 'hum',
       maxSec: 15,
+      onState: (st) => helper.setRecording(st === 'rec'),
       onDone: (buf) => {
         c.clip = buf;
         c.play = g.hard ? reverseBuffer(buf) : buf;
@@ -143,6 +153,7 @@ export function mount(view, { game, navigate }) {
 
   function review() {
     const c = g.cur;
+    helper.setRecording(false);
     const scene = stage.show(html`
       <h2 class="t-big" data-in>Mırıltın Hazır</h2>
       ${clipCardHTML('a', 'Senin Mırıltın', c.clip, 'big')}
@@ -159,6 +170,7 @@ export function mount(view, { game, navigate }) {
 
   function handoff() {
     stopClip();
+    helper.hide();
     const c = g.cur;
     scoreboard.setActive(c.guesser);
     music.duck('hum', false);
@@ -265,6 +277,9 @@ export function mount(view, { game, navigate }) {
   function recap(ok) {
     const c = g.cur;
     music.duck('hum', false);
+    // Artık herkes biliyor: orijinalini dinleyip mırıltıyla karşılaştırabilirsiniz
+    helper.show(c.song);
+    helper.setRecording(false);
     const lastRound = g.round + 1 >= g.total;
     const rev = g.hard ? c.play : reverseBuffer(c.clip);
     const scene = stage.show(html`
@@ -302,6 +317,7 @@ export function mount(view, { game, navigate }) {
 
   function final() {
     g.over = true;
+    helper.hide();
     scoreboard.setActive(-1);
     const fin = versusFinaleHTML(scoreboard.scores, { lines: { tie: 'Berabere! İki Müzik Kulağı' } });
     const sub = fin.winner === -1 ? 'Mırıltıları ikiniz de aynı hızla çözdünüz.' : `En iyi müzik kulağı ${nameOf(fin.winner)}.`;

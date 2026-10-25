@@ -1,7 +1,7 @@
 // Gülme Yasak: biri taş surat olur, öbürü onu güldürmeye çalışır. Kamera gülümsemeyi yakalar
 
 import { html, Life, pick, clamp } from '../lib/dom.js';
-import { nameOf } from '../lib/store.js';
+import { nameOf, isDefaultName } from '../lib/store.js';
 import { fmtSec } from '../lib/text.js';
 import { Stage } from '../ui/stage.js';
 import { icon } from '../ui/icons.js';
@@ -13,6 +13,7 @@ import { burst } from '../fx/confetti.js';
 import { JESTER_IDEAS } from '../data/camera.js';
 import { lobbyHTML, optHTML, celebrate, versusFinaleHTML, coinFlip, FIRST_OPTIONS, pSpan } from './common.js';
 import { camShell, camController, camBoot, waitPlayers, drawFaceFrame, meter, PCOL, albumStripHTML, downloadAlbum } from './cam.js';
+import { announcer } from '../audio/announcer.js';
 import { smileOf } from '../vision/faces.js';
 
 const CALIB_MS = 2200;
@@ -75,6 +76,7 @@ export function mount(view, { game, navigate }) {
   async function play() {
     const total = Number(cfg.turns) * 2;
     g = { turn: 0, total, album: [], over: false, first: 0 };
+    announcer.preload(['turn-0-stone', 'turn-1-stone', 'turn-0-stage', 'turn-1-stage', 'letsgo', 'go-guldur', 'cd-3', 'cd-2', 'cd-1', 'laughed', 'stone']);
     scoreboard.show({ mode: 'versus', mid: `Tur 1 / ${total}` });
     cam.draw = null;
     g.first = cfg.first === 'random' ? await coinFlip(stage, life, { title: 'İlk Kim Taş Surat?' }) : Number(cfg.first);
@@ -95,6 +97,7 @@ export function mount(view, { game, navigate }) {
         </div>
       </div>`, {}, { className: 'hud' });
     const tip = scene.querySelector('[data-tip]');
+    if (isDefaultName(stone)) announcer.say(`turn-${stone}-stone`);
     const samples = [];
     let since = 0;
     cam.draw = (gx, players) => players.forEach((p, i) => {
@@ -121,7 +124,9 @@ export function mount(view, { game, navigate }) {
     if (!life.alive) return;
     const base = Math.min(0.45, median(samples));
     tip.textContent = `${nameOf(jester)}, sahne senin!`;
-    await countdown(scene, life, { final: 'Güldür!' });
+    announcer.turn(jester, 'stage');
+    await life.sleep(1300);
+    await countdown(scene, life, { final: 'Güldür!', voice: 'go-guldur' });
     run(stone, jester, base);
   }
 
@@ -159,8 +164,10 @@ export function mount(view, { game, navigate }) {
       if (laughed) {
         sfx.buzzer();
         cam.flash();
+        announcer.say('laughed');
       } else {
         sfx.whistle();
+        announcer.say('stone');
       }
       const winner = laughed ? jester : stone;
       g.album.push({ img, cap: laughed ? 'Güldü!' : 'Taş Surat', by: nameOf(stone), color: PCOL[stone] });
@@ -241,7 +248,8 @@ export function mount(view, { game, navigate }) {
     cam.onFrame = null;
     cam.draw = null;
     scoreboard.setActive(-1);
-    const { html: podium } = versusFinaleHTML(scoreboard.scores, { lines: { tie: 'Berabere! Kimse Kimseden Komik Değil' } });
+    const { html: podium, winner } = versusFinaleHTML(scoreboard.scores, { lines: { tie: 'Berabere! Kimse Kimseden Komik Değil' } });
+    announcer.winner(winner);
     const album = g.album.filter((a) => a.img);
     stage.show(html`
       ${podium}

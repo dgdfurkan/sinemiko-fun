@@ -10,7 +10,8 @@ import { countdown } from '../ui/countdown.js';
 import { sfx } from '../audio/sfx.js';
 import { burst } from '../fx/confetti.js';
 import { lobbyHTML, optHTML, celebrate, versusFinaleHTML } from './common.js';
-import { camShell, camController, camBoot, waitPlayers, missingText, drawSkeleton, ring, tag, PCOL, say, hush, albumStripHTML, downloadAlbum } from './cam.js';
+import { camShell, camController, camBoot, waitPlayers, missingText, drawSkeleton, ring, tag, PCOL, albumStripHTML, downloadAlbum } from './cam.js';
+import { announcer } from '../audio/announcer.js';
 import { POSES, body, figSVG } from '../vision/poses.js';
 
 const HOLD = 0.5;
@@ -21,10 +22,7 @@ export function mount(view, { game, navigate }) {
   const shell = camShell(view, 'game-pose');
   const stage = new Stage(shell.stageEl, life);
   const cam = camController(shell, life);
-  life.add(() => {
-    scoreboard.hide();
-    hush();
-  });
+  life.add(() => scoreboard.hide());
   const cfg = { rounds: '10', mode: 'sinemiko' };
   let g = null;
 
@@ -78,9 +76,10 @@ export function mount(view, { game, navigate }) {
       return p;
     };
     g = { round: 0, total, album: [], over: false, lastTrap: false };
+    announcer.preload(['sinemiko', 'go-poz', 'cd-3', 'cd-2', 'cd-1', 'trap', 'safe', 'miss', ...POSES.map((p) => `pose-${p.id}`)]);
     scoreboard.show({ mode: 'versus', mid: `Tur 1 / ${total}` });
     const scene = stage.show(html`<div class="hud-top" data-in><div class="hud-card"><h2 class="t-big">Isınma Hareketleri</h2><p class="hud-tip">Kartı görünce pozu yapın ve tutun!</p></div></div>`, {}, { className: 'hud' });
-    await countdown(scene, life, { final: 'Poz!' });
+    await countdown(scene, life, { final: 'Poz!', voice: 'go-poz' });
     let prev = null;
     while (g.round < total) {
       const pose = next(prev);
@@ -118,7 +117,8 @@ export function mount(view, { game, navigate }) {
       const timeBar = scene.querySelector('[data-time]');
       const warn = scene.querySelector('[data-warn]');
       sfx.whoosh();
-      say(simon && !trap ? `Sinemiko diyor ki, ${pose.name}` : pose.name);
+      if (simon && !trap) announcer.say('sinemiko', `pose-${pose.id}`);
+      else announcer.say(`pose-${pose.id}`);
 
       const finishPlayer = (i, now, pts, label) => {
         const s = st[i];
@@ -132,8 +132,10 @@ export function mount(view, { game, navigate }) {
         if (pts > 0) {
           sfx.success();
           burst(cx, cy, { count: 50, power: 12, colors: [PCOL[i], '#ffcd3c', '#fff'] });
+          if (pts === 2) announcer.cheer();
         } else {
           sfx.fail();
+          announcer.say('trap');
         }
         scoreboard.add(i, pts, cam.pointEl(head.x, head.y));
         if (p && (pts > 0 || trap)) {
@@ -150,6 +152,7 @@ export function mount(view, { game, navigate }) {
         ended = true;
         cam.onFrame = null;
         if (trap) {
+          if (!st[0].done || !st[1].done) announcer.react('safe');
           [0, 1].forEach((i) => {
             if (st[i].done) return;
             st[i].done = true;
@@ -162,6 +165,7 @@ export function mount(view, { game, navigate }) {
           sfx.sparkle();
         } else if (!st[0].done && !st[1].done) {
           sfx.boing();
+          announcer.say('miss');
         }
         [0, 1].forEach((i) => { if (!st[i].done) st[i].label = 'Yetişemedi'; });
         timeBar.getAnimations().forEach((a) => a.pause());
@@ -231,9 +235,9 @@ export function mount(view, { game, navigate }) {
     g.over = true;
     cam.onFrame = null;
     cam.draw = null;
-    hush();
     const scores = scoreboard.scores;
-    const { html: podium } = versusFinaleHTML(scores, { lines: { tie: 'Berabere! İkiniz de Poz Ustası' } });
+    const { html: podium, winner } = versusFinaleHTML(scores, { lines: { tie: 'Berabere! İkiniz de Poz Ustası' } });
+    announcer.winner(winner);
     const album = g.album.slice(-12);
     stage.show(html`
       ${podium}

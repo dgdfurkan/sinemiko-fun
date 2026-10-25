@@ -3,6 +3,8 @@
 import { el, html } from '../lib/dom.js';
 import { sfx } from '../audio/sfx.js';
 import { burst } from '../fx/confetti.js';
+import { store } from '../lib/store.js';
+import { announcer } from '../audio/announcer.js';
 
 function slam(layer, text, final) {
   const node = el(html`<span class="cd-num ${final ? 'final' : ''}">${text}</span>`);
@@ -19,15 +21,19 @@ function slam(layer, text, final) {
   ).finished.then(() => node.remove(), () => node.remove());
 }
 
-export async function countdown(host, life, { from = 3, final = 'Başla!', step = 760 } = {}) {
+// voice: son kelimenin ses kaydı (ör. 'go-poz'); verilirse sayıları da sunucu okur
+export async function countdown(host, life, { from = 3, final = 'Başla!', step = 760, voice = null } = {}) {
   const layer = el(html`<div class="countdown" aria-live="assertive"></div>`);
   host.append(layer);
   life.add(() => layer.remove());
+  const talk = !!voice && from <= 3 && store.get('voiceOn');
   for (let n = from; n >= 1; n--) {
-    sfx.tick(from - n);
+    if (talk) announcer.say(`cd-${n}`);
+    else sfx.tick(from - n);
     slam(layer, String(n), false);
     await life.sleep(step);
   }
+  if (talk) announcer.say(voice);
   sfx.go();
   slam(layer, final, true);
   const r = host.getBoundingClientRect();

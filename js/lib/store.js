@@ -26,6 +26,7 @@ function load() {
     musicVol: num(saved.musicVol, 0.55),
     sfxVol: num(saved.sfxVol, 0.8),
     bubbles: bool(saved.bubbles, true),
+    voiceOn: bool(saved.voiceOn, true),
     popped: num(saved.popped, 0, 0, 1e9),
     maskVol: num(saved.maskVol, 0.7),
     homeTab: typeof saved.homeTab === 'string' ? saved.homeTab : 'all',
@@ -71,3 +72,4 @@ export const store = {
 };
 
 export const nameOf = (i) => state.names[i];
+export const isDefaultName = (i) => state.names[i] === DEFAULT_NAMES[i];

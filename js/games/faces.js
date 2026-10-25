@@ -10,7 +10,8 @@ import { countdown } from '../ui/countdown.js';
 import { sfx } from '../audio/sfx.js';
 import { burst } from '../fx/confetti.js';
 import { lobbyHTML, optHTML, celebrate, versusFinaleHTML } from './common.js';
-import { camShell, camController, camBoot, waitPlayers, missingText, drawFaceFrame, meter, PCOL, say, hush, albumStripHTML, downloadAlbum } from './cam.js';
+import { camShell, camController, camBoot, waitPlayers, missingText, drawFaceFrame, meter, PCOL, albumStripHTML, downloadAlbum } from './cam.js';
+import { announcer } from '../audio/announcer.js';
 import { EXPRS, faceSVG } from '../vision/faces.js';
 
 const HOLD = 0.4;
@@ -21,10 +22,7 @@ export function mount(view, { game, navigate }) {
   const shell = camShell(view, 'game-faces');
   const stage = new Stage(shell.stageEl, life);
   const cam = camController(shell, life);
-  life.add(() => {
-    scoreboard.hide();
-    hush();
-  });
+  life.add(() => scoreboard.hide());
   const cfg = { rounds: '8' };
   let g = null;
 
@@ -66,10 +64,11 @@ export function mount(view, { game, navigate }) {
     const total = Number(cfg.rounds);
     const deck = shuffle(EXPRS);
     g = { round: 0, total, album: [], over: false };
+    announcer.preload(['go-surat', 'cd-3', 'cd-2', 'cd-1', 'miss', ...EXPRS.map((e) => `face-${e.id}`)]);
     scoreboard.show({ mode: 'versus', mid: `Tur 1 / ${total}` });
     const scene = stage.show(html`<div class="hud-top" data-in><div class="hud-card"><h2 class="t-big">Yüz Kaslarını Isıtın</h2><p class="hud-tip">Kartı görünce suratı yapın ve tutun!</p></div></div>`, {}, { className: 'hud' });
     cam.draw = (gx, players) => players.forEach((p, i) => { if (p) drawFaceFrame(gx, cam, p, i); });
-    await countdown(scene, life, { final: 'Surat!' });
+    await countdown(scene, life, { final: 'Surat!', voice: 'go-surat' });
     while (g.round < total) {
       if (!deck.length) deck.push(...shuffle(EXPRS));
       scoreboard.setMid(`Tur ${g.round + 1} / ${total}`);
@@ -100,7 +99,7 @@ export function mount(view, { game, navigate }) {
       const timeBar = scene.querySelector('[data-time]');
       const warn = scene.querySelector('[data-warn]');
       sfx.whoosh();
-      say(expr.name);
+      announcer.say(`face-${expr.id}`);
 
       const shoot = (i, cap) => {
         const p = cam.players[i];
@@ -116,7 +115,10 @@ export function mount(view, { game, navigate }) {
         timeBar.getAnimations().forEach((a) => a.pause());
         // Yetişemeyenin de o anki hali albüme girer
         [0, 1].forEach((i) => { if (!st[i].done) shoot(i, `${expr.name}?`); });
-        if (!st[0].done && !st[1].done) sfx.boing();
+        if (!st[0].done && !st[1].done) {
+          sfx.boing();
+          announcer.say('miss');
+        }
         life.timeout(() => { if (stage.scene === scene) resolve(); }, 1400);
       };
 
@@ -142,6 +144,7 @@ export function mount(view, { game, navigate }) {
         });
         if (!fresh.length) return;
         const pts = order === 0 ? 2 : 1;
+        if (pts === 2) announcer.cheer();
         fresh.forEach((i) => {
           const s = st[i];
           s.done = true;
@@ -178,8 +181,8 @@ export function mount(view, { game, navigate }) {
     g.over = true;
     cam.onFrame = null;
     cam.draw = null;
-    hush();
-    const { html: podium } = versusFinaleHTML(scoreboard.scores, { lines: { tie: 'Berabere! İkiniz de Surat Ustası' } });
+    const { html: podium, winner } = versusFinaleHTML(scoreboard.scores, { lines: { tie: 'Berabere! İkiniz de Surat Ustası' } });
+    announcer.winner(winner);
     const album = g.album.slice(0, 24);
     stage.show(html`
       ${podium}

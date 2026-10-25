@@ -19,6 +19,7 @@ export function openSettings() {
       <div class="set-row"><span class="opt-label">Fon Müziği</span>${switchHTML('musicOn', store.get('musicOn'), 'Fon müziği')}</div>
       <div class="set-row"><span class="opt-label">Müzik Sesi</span>${sliderHTML('musicVol', store.get('musicVol'), 'Müzik sesi')}</div>
       <div class="set-row"><span class="opt-label">Efekt Sesi</span>${sliderHTML('sfxVol', store.get('sfxVol'), 'Efekt sesi')}</div>
+      <div class="set-row"><span class="opt-label">Sesli Sunucu</span>${switchHTML('voiceOn', store.get('voiceOn'), 'Kamera oyunlarında sesli sunucu')}</div>
       <div class="set-row"><span class="opt-label">Baloncuklar</span>${switchHTML('bubbles', store.get('bubbles'), 'Baloncuklar')}</div>
     </div>
     <p class="opt-note">Bugüne kadar ${store.get('popped')} baloncuk patlattınız. İsimler ve ayarlar bu tarayıcıda saklanır.</p>
@@ -32,6 +33,7 @@ export function openSettings() {
     input.addEventListener('blur', () => { input.value = store.get('names')[Number(input.dataset.name)]; });
   });
   bindSwitch(el.querySelector('[data-switch="musicOn"]'), { value: store.get('musicOn'), onChange: (v) => store.set('musicOn', v) });
+  bindSwitch(el.querySelector('[data-switch="voiceOn"]'), { value: store.get('voiceOn'), onChange: (v) => store.set('voiceOn', v) });
   bindSwitch(el.querySelector('[data-switch="bubbles"]'), { value: store.get('bubbles'), onChange: (v) => store.set('bubbles', v) });
   bindSlider(el.querySelector('[data-slider="musicVol"]'), { value: store.get('musicVol'), onInput: (v) => store.set('musicVol', v) });
   bindSlider(el.querySelector('[data-slider="sfxVol"]'), { value: store.get('sfxVol'), onInput: (v) => store.set('sfxVol', v), onChange: () => sfx.pop(1) });

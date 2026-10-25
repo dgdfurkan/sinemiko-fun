@@ -26,7 +26,7 @@ Furkan ile Sinem'in oyun gecesi için hazırlanmış, tarayıcıda çalışan ç
 | Ne Kadar Tanıyorsun? | Biri cevabını gizlice seçer, diğeri tahmin eder. | |
 | Aynı Kafa | Aynı anda kelime söylenir, iki kelimeyi birleştiren ortak kelimede buluşana kadar devam edilir. | |
 | Sincap Sesi | Kayıt önce süper hızlı sincap sesiyle çalar, bilinemezse sincap, dev ve normal sese doğru kolaylaşır. | Mikrofon |
-| Mırıldan Bakalım | Şarkı sözsüz mırıldanılır, partner tahmin eder. Zor modda mırıltı tersten çalar. | Mikrofon |
+| Mırıldan Bakalım | Şarkı sözsüz mırıldanılır, partner tahmin eder. Hatırlamazsan sağdaki düğmelerle 30 saniyelik kesiti dinler, sözlere bakarsın. Zor modda mırıltı tersten çalar. | Mikrofon |
 | Tekerleme Düellosu | Aynı tekerlemeyi ikiniz de söylersiniz, oyun süreyi ölçer, hatasız en hızlı kazanır. | Mikrofon |
 | Yankı Tuzağı | Kulaklıkta kendi sesini gecikmeli duyarken metni takılmadan okumaya çalışırsın. | Mikrofon, kulaklık |
 | Balon Şişir | Tek nefeste "aaa" dedikçe balon şişer, en uzun tutan kazanır. | Mikrofon |
@@ -53,6 +53,8 @@ Sonra tarayıcıda `http://localhost:5177` adresini aç.
 - Müzik ve ses efektleri Web Audio ile anında üretilir, ses dosyası yoktur.
 - Kayıtlar yalnızca tarayıcıda kalır, hiçbir sunucuya gönderilmez. Reverse Play'de turu WAV olarak indirebilirsin.
 - Kamera oyunları yüz ve vücut takibi için MediaPipe kullanır. Model ilk açılışta indirilir, görüntü tarayıcıda işlenir ve hiçbir yere gönderilmez. Kamera yalnızca oyun ekranı açıkken çalışır.
-- Kamera oyunlarında oyuncular solda ve sağda durarak ayırt edilir. Türkçe ses yüklüyse komutlar yüksek sesle de okunur.
+- Kamera oyunlarında oyuncular solda ve sağda durarak ayırt edilir.
+- Kamera oyunlarının sunucu sesi Gemini TTS ile önceden seslendirildi (`audio/voice/`). Metinler ve sahne tarifi `tools/voice-lines.json` içinde; yeniden üretmek için `python3 tools/seslendir.py`. Ayarlar'dan Sesli Sunucu kapatılabilir.
+- Mırıldan Bakalım'daki kesitler Apple'ın resmi 30 saniyelik önizlemelerinden, sözler LRCLIB'den (yoksa lyrics.ovh) oyun sırasında çekilir; depoda şarkı ya da söz saklanmaz.
 - Mikrofon yalnızca kayıt sırasında açık kalır. Bluetooth kulaklıklar böylece kayıt dinlerken kaliteli moda döner.
 - İsimler, ses ayarları ve patlatılan baloncuk sayısı tarayıcıda saklanır.

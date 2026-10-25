@@ -10,7 +10,8 @@ import { countdown } from '../ui/countdown.js';
 import { sfx } from '../audio/sfx.js';
 import { burst } from '../fx/confetti.js';
 import { lobbyHTML, optHTML, celebrate, versusFinaleHTML, coinFlip, FIRST_OPTIONS, pSpan } from './common.js';
-import { camShell, camController, camBoot, waitPlayers, missingText, drawSkeleton, tag, PCOL, say, hush, albumStripHTML, downloadAlbum } from './cam.js';
+import { camShell, camController, camBoot, waitPlayers, missingText, drawSkeleton, tag, PCOL, albumStripHTML, downloadAlbum } from './cam.js';
+import { announcer } from '../audio/announcer.js';
 import { body, poseVec, similarity } from '../vision/poses.js';
 
 const COPY_SEC = 7;
@@ -22,10 +23,7 @@ export function mount(view, { game, navigate }) {
   const shell = camShell(view, 'game-mirror');
   const stage = new Stage(shell.stageEl, life);
   const cam = camController(shell, life);
-  life.add(() => {
-    scoreboard.hide();
-    hush();
-  });
+  life.add(() => scoreboard.hide());
   const cfg = { turns: '3', first: 'random' };
   let g = null;
 
@@ -68,6 +66,7 @@ export function mount(view, { game, navigate }) {
   async function play() {
     const total = Number(cfg.turns) * 2;
     g = { turn: 0, total, album: [], over: false, first: 0 };
+    announcer.preload(['turn-0-poz', 'turn-1-poz', 'turn-0-kopya', 'turn-1-kopya', 'go-pozver', 'go-kopyala', 'go-dondur', 'cd-3', 'cd-2', 'cd-1', 'copied', 'nope']);
     scoreboard.show({ mode: 'versus', mid: `Poz 1 / ${total}` });
     cam.draw = null;
     g.first = cfg.first === 'random' ? await coinFlip(stage, life, { title: 'İlk Kim Poz Veriyor?' }) : Number(cfg.first);
@@ -100,9 +99,9 @@ export function mount(view, { game, navigate }) {
       cam.draw = (gx, players) => players.forEach((p, i) => {
         if (p) drawSkeleton(gx, cam, p, i, { alpha: i === leader ? 1 : 0.35, glow: i === leader ? 0.5 : 0, label: i === leader ? 'Poz Ver!' : nameOf(i) });
       });
-      say(`${nameOf(leader)}, poz ver!`);
+      announcer.turn(leader, 'poz');
       await life.sleep(900);
-      await countdown(scene, life, { from: 3, final: 'Dondur!', step: 900 });
+      await countdown(scene, life, { from: 3, final: 'Dondur!', step: 900, voice: 'go-dondur' });
       const p = cam.players[leader];
       const b = p && body(p.lm, p.ar);
       if (b && b.arms) {
@@ -137,7 +136,7 @@ export function mount(view, { game, navigate }) {
       const simEl = scene.querySelector('[data-sim]');
       const warn = scene.querySelector('[data-warn]');
       const timeBar = scene.querySelector('[data-time]');
-      say(`${nameOf(copier)}, kopyala!`);
+      announcer.turn(copier, 'kopya');
       sfx.whoosh();
       let shown = -1;
 
@@ -156,12 +155,14 @@ export function mount(view, { game, navigate }) {
           pts = sec <= 2.5 ? 3 : sec <= 4.5 ? 2 : 1;
           st.label = `Kopyaladı! +${pts}`;
           sfx.success();
+          announcer.say('copied');
           const [cx, cy] = cam.client(head.x, head.y);
           burst(cx, cy, { count: 60, power: 13, colors: [PCOL[copier], '#ffcd3c', '#fff'] });
           scoreboard.add(copier, pts, cam.pointEl(head.x, head.y));
         } else {
           st.label = `En iyi %${Math.round(st.best * 100)}`;
           sfx.fail();
+          announcer.say('nope');
         }
         const img = p ? cam.snapshot(p.box, 0.12) : null;
         if (ok && img) cam.flash();
@@ -273,9 +274,9 @@ export function mount(view, { game, navigate }) {
     g.over = true;
     cam.onFrame = null;
     cam.draw = null;
-    hush();
     scoreboard.setActive(-1);
-    const { html: podium } = versusFinaleHTML(scoreboard.scores, { lines: { tie: 'Berabere! Tıpatıp Aynısınız' } });
+    const { html: podium, winner } = versusFinaleHTML(scoreboard.scores, { lines: { tie: 'Berabere! Tıpatıp Aynısınız' } });
+    announcer.winner(winner);
     const album = g.album.slice(-12);
     stage.show(html`
       ${podium}

@@ -125,6 +125,7 @@ export function miniPlayer(scene) {
 // onDone(buffer, raw) temizlenmiş kaydı verir; ses gelmezse sahnede kalır.
 export function recordScene(stage, life, rec, {
   who, heading, extra = '', actions = {}, onDone, maxSec = 10, duckKey = 'mic', hint = 'tuşuyla da başlatıp bitirebilirsin',
+  onState = null,
 }) {
   music.duck(duckKey, true);
   stopClip();
@@ -169,6 +170,7 @@ export function recordScene(stage, life, rec, {
   const lock = (on) => scene.querySelectorAll('[data-lock-rec]').forEach((b) => { b.disabled = on; });
   const reset = () => {
     state = 'idle';
+    if (onState) onState('idle');
     scene.classList.remove('is-busy', 'is-rec', 'is-opening');
     label.textContent = 'Kayda Başla';
     time.textContent = '0,0 sn';
@@ -179,6 +181,7 @@ export function recordScene(stage, life, rec, {
   async function toggle() {
     if (state === 'idle') {
       state = 'opening';
+      if (onState) onState('rec');
       stopClip();
       lock(true);
       scene.classList.add('is-opening');
@@ -258,7 +261,7 @@ const cardInner = (it) => html`<span class="wc-cat">${it.cat}</span><span class=
 // Gizli kartı gösterir; "Başka Kart" ve isteğe bağlı "Kendim Yazacağım" ile değiştirilebilir
 export function pickCardScene(stage, {
   hand, item, draw, onGo, goLabel = 'Bununla Kaydet', allowCustom = true,
-  customCat = 'Kendi Kelimen', customPlaceholder = 'Ne söyleyeceksin?',
+  customCat = 'Kendi Kelimen', customPlaceholder = 'Ne söyleyeceksin?', onChange = null,
 }) {
   let cur = item;
   let mode = 'card';
@@ -279,6 +282,7 @@ export function pickCardScene(stage, {
   };
   const setMode = (m) => {
     mode = m;
+    if (onChange) onChange(m === 'custom' ? null : cur);
     row.innerHTML = toHTML(m === 'custom' ? customButtons() : cardButtons());
     popIn(row.children);
     swapCard();
@@ -289,6 +293,7 @@ export function pickCardScene(stage, {
     <div class="row" data-in data-row>${cardButtons()}</div>`, {
     shuffle: () => {
       cur = draw();
+      if (onChange) onChange(cur);
       swapCard();
     },
     custom: () => setMode('custom'),
