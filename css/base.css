@@ -61,6 +61,11 @@ body[data-theme="draw"]       { --accent: #12bccb; --accent-d: #0b98a4; --accent
 body[data-theme="tabu"]       { --accent: #c94fe0; --accent-d: #a634bd; --accent-soft: #f6dcfb; --wash-a: #e08cf25a; --wash-b: #ffd96a55; }
 body[data-theme="quiz"]       { --accent: #5f6fff; --accent-d: #4453e6; --accent-soft: #e0e4ff; --wash-a: #8f9cff55; --wash-b: #ff8cc04c; }
 body[data-theme="meld"]       { --accent: #ff7aa8; --accent-d: #e8558a; --accent-soft: #ffe1ec; --wash-a: #ff9ec955; --wash-b: #ffd96a66; }
+body[data-theme="chipmunk"]   { --accent: #ff9f1c; --accent-d: #e8840a; --accent-soft: #ffe9c8; --wash-a: #ffbf5c5a; --wash-b: #c9905c44; }
+body[data-theme="hum"]        { --accent: #2fbf98; --accent-d: #1f9e7c; --accent-soft: #d5f7ec; --wash-a: #5fe0bc55; --wash-b: #ff8cc04c; }
+body[data-theme="echo"]       { --accent: #4b7bff; --accent-d: #3560e6; --accent-soft: #dfe7ff; --wash-a: #7f9fff55; --wash-b: #4fe0b04c; }
+body[data-theme="twister"]    { --accent: #ff6b57; --accent-d: #e8503c; --accent-soft: #ffe2dc; --wash-a: #ff9e8a5a; --wash-b: #ffd96a55; }
+body[data-theme="balloon"]    { --accent: #ff5a7a; --accent-d: #e63c5e; --accent-soft: #ffe0e7; --wash-a: #ff8fa555; --wash-b: #a6e35a4c; }
 body[data-theme="truthdare"]  { --accent: var(--cherry); --accent-d: var(--cherry-d); --accent-soft: #ffdade; --wash-a: #ff6f805a; --wash-b: #ffd96a66; }
 
 *, *::before, *::after { box-sizing: border-box; }

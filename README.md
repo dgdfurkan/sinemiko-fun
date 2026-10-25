@@ -19,6 +19,11 @@ Furkan ile Sinem'in oyun gecesi için hazırlanmış, tarayıcıda çalışan ç
 | Anlat Bakalım | Yasak kelimeleri kullanmadan anlatırsın. Süre bitene kadar kaç kart bilinirse. | |
 | Ne Kadar Tanıyorsun? | Biri cevabını gizlice seçer, diğeri tahmin eder. | |
 | Aynı Kafa | Aynı anda kelime söylenir, iki kelimeyi birleştiren ortak kelimede buluşana kadar devam edilir. | |
+| Sincap Sesi | Kayıt önce süper hızlı sincap sesiyle çalar, bilinemezse sincap, dev ve normal sese doğru kolaylaşır. | Mikrofon |
+| Mırıldan Bakalım | Şarkı sözsüz mırıldanılır, partner tahmin eder. Zor modda mırıltı tersten çalar. | Mikrofon |
+| Tekerleme Düellosu | Aynı tekerlemeyi ikiniz de söylersiniz, oyun süreyi ölçer, hatasız en hızlı kazanır. | Mikrofon |
+| Yankı Tuzağı | Kulaklıkta kendi sesini gecikmeli duyarken metni takılmadan okumaya çalışırsın. | Mikrofon, kulaklık |
+| Balon Şişir | Tek nefeste "aaa" dedikçe balon şişer, en uzun tutan kazanır. | Mikrofon |
 
 ## Kısayollar
 

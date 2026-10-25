@@ -2,17 +2,15 @@
 
 import { html, toHTML, Life, shuffle, pick } from '../lib/dom.js';
 import { nameOf } from '../lib/store.js';
-import { judgeGuess, dative, fmtSec } from '../lib/text.js';
+import { judgeGuess, dative } from '../lib/text.js';
 import { Stage } from '../ui/stage.js';
 import { avatar, setBlob, react } from '../ui/avatar.js';
 import { icon } from '../ui/icons.js';
 import { scoreboard } from '../ui/scoreboard.js';
 import { segHTML, bindSeg, stepperHTML, bindStepper, chipsHTML, bindChips } from '../ui/controls.js';
-import { Waveform } from '../ui/waveform.js';
 import { countdown } from '../ui/countdown.js';
-import { openSheet, toast } from '../ui/overlay.js';
-import { VoiceRecorder, cleanClip, micErrorText } from '../audio/recorder.js';
-import { makeBuffer, reverseBuffer, playClip, stopClip, isPlaying, downloadClips } from '../audio/clip.js';
+import { VoiceRecorder } from '../audio/recorder.js';
+import { reverseBuffer, playClip, stopClip, isPlaying, downloadClips } from '../audio/clip.js';
 import { music } from '../audio/music.js';
 import { sfx } from '../audio/sfx.js';
 import { burst } from '../fx/confetti.js';
@@ -21,6 +19,7 @@ import {
   lobbyHTML, optHTML, FIRST_OPTIONS, coinFlip, celebrate, versusFinaleHTML, finaleButtons,
   other, pSpan, flipEl, popIn, bumpEl, shakeEl,
 } from './common.js';
+import { micGate, clipCardHTML, wireClip as wireClipBase, miniPlayer, recordScene as recordSceneBase } from './mic.js';
 
 const MAX_SEC = 10;
 const POINTS = { full: 3, close: 1, miss: 0 };
@@ -46,94 +45,9 @@ export function mount(view, { game, navigate }) {
   let g = null;
   let starting = false;
 
-  /* ---------- Klip kartı ---------- */
-
-  const clipCardHTML = (id, title, buffer, cls = '') => html`
-    <div class="clip-card card ${cls}" data-clip="${id}" data-in>
-      <button class="clip-play" data-act="play-${id}" data-silent aria-label="Dinle">${icon('play', 'i-play')}${icon('stop', 'i-stop')}</button>
-      <div class="clip-body"><span class="clip-title">${title}</span><canvas class="clip-wave"></canvas></div>
-      <span class="clip-dur">${fmtSec(buffer.duration)}</span>
-    </div>`;
-
-  function wireClip(scene, id, buffer) {
-    const card = scene.querySelector(`[data-clip="${id}"]`);
-    const wf = new Waveform(card.querySelector('canvas'), { bars: 64 });
-    wf.setBuffer(buffer);
-    stage.own(() => wf.destroy());
-    const ctl = {
-      card,
-      buffer,
-      handle: null,
-      play(force = false) {
-        if (!force && card.classList.contains('playing')) {
-          stopClip();
-          return;
-        }
-        card.classList.add('playing');
-        const h = playClip(ctl.buffer, {
-          onProgress: (p) => { if (ctl.handle === h) wf.setProgress(p); },
-          onEnd: () => {
-            if (ctl.handle !== h) return;
-            ctl.handle = null;
-            card.classList.remove('playing');
-            wf.setProgress(0);
-          },
-        });
-        ctl.handle = h;
-      },
-      setBuffer(b, title) {
-        ctl.buffer = b;
-        wf.setBuffer(b);
-        card.querySelector('.clip-title').textContent = title;
-        card.querySelector('.clip-dur').textContent = fmtSec(b.duration);
-      },
-    };
-    return ctl;
-  }
-
-  // Küçük oynatıcı düğmeleri: aynı anda tek klip çalar
-  function miniPlayer(scene) {
-    let current = null;
-    const reset = (el) => {
-      el.classList.remove('playing');
-      el.style.setProperty('--p', '0');
-    };
-    return (el, buffer) => {
-      const wasPlaying = el.classList.contains('playing');
-      scene.querySelectorAll('.mini-clip.playing').forEach(reset);
-      if (wasPlaying) {
-        current = null;
-        stopClip();
-        return;
-      }
-      el.classList.add('playing');
-      const h = playClip(buffer, {
-        onProgress: (p) => { if (current === h) el.style.setProperty('--p', p.toFixed(3)); },
-        onEnd: () => { if (current === h) { current = null; reset(el); } },
-      });
-      current = h;
-    };
-  }
-
-  // İzin penceresi açık kalırsa kullanıcıya nereye bakacağını söyle
-  async function withPermissionHint(task) {
-    const hint = setTimeout(() => toast('Tarayıcı mikrofon izni soruyor. Adres çubuğunun yanındaki pencereden izin ver.', { tone: 'pink', ms: 5000 }), 1200);
-    try {
-      return await task();
-    } finally {
-      clearTimeout(hint);
-    }
-  }
-
-  function micError(err) {
-    openSheet(html`
-      <div class="sheet-ic">${icon('mic')}</div>
-      <h2 class="t-big t-accent">Mikrofon Açılamadı</h2>
-      <p class="t-lead">${micErrorText(err)}</p>
-      <button class="btn btn--primary" data-act="ok" data-primary>Tamam</button>`, {
-      actions: { ok: (t, e, close) => close() },
-    });
-  }
+  // Ortak mikrofon parçalarını bu oyunun sahnesine bağla
+  const wireClip = (scene, id, buffer) => wireClipBase(stage, scene, id, buffer);
+  const recordScene = (opts) => recordSceneBase(stage, life, rec, { duckKey: 'reverse', maxSec: MAX_SEC, ...opts });
 
   /* ---------- Lobi ---------- */
 
@@ -168,17 +82,12 @@ export function mount(view, { game, navigate }) {
     starting = true;
     const btn = stage.scene.querySelector('[data-act="start"], [data-act="again"]');
     if (btn) btn.disabled = true;
-    try {
-      await withPermissionHint(() => rec.warmup());
-    } catch (err) {
-      starting = false;
-      if (!life.alive) return;
-      if (btn) btn.disabled = false;
-      micError(err);
+    const ok = await micGate(rec, life);
+    starting = false;
+    if (!ok) {
+      if (life.alive && btn) btn.disabled = false;
       return;
     }
-    starting = false;
-    if (!life.alive) return;
     g = { round: 0, total: cfg.rounds, first: 0, deck: buildDeck(), archive: [], over: false, cur: null };
     scoreboard.show({ mode: 'versus', mid: `Tur 1 / ${g.total}` });
     g.first = cfg.first === 'random' ? await coinFlip(stage, life, { title: 'İlk Kim Söylüyor?' }) : Number(cfg.first);
@@ -288,133 +197,6 @@ export function mount(view, { game, navigate }) {
       if (dirty && stage.scene === scene) {
         dirty = false;
         swapCard();
-      }
-    }
-  }
-
-  /* ---------- Kayıt sahnesi ---------- */
-
-  function recordScene({ who, heading, extra = '', actions = {}, onDone }) {
-    music.duck('reverse', true);
-    stopClip();
-    let state = 'idle';
-    let startAt = 0;
-    let stopLoop = null;
-    const levels = new Array(48).fill(0.03);
-    const scene = stage.show(html`
-      <h2 class="t-big" data-in>${heading}</h2>
-      ${extra}
-      <div class="mic-wrap p${who}" data-in>
-        <span class="mic-halo"></span>
-        <button class="mic" data-act="mic" data-silent aria-label="Kayda başla">
-          ${icon('mic', 'i-mic')}${icon('stop', 'i-stop')}
-          <span class="mic-label">Kayda Başla</span>
-        </button>
-      </div>
-      <div class="rec-meter" data-in><span class="rec-dot"></span><canvas class="live-wave"></canvas><span class="rec-time">0,0 sn</span></div>
-      <p class="key-hint" data-in><span class="key">Boşluk</span> tuşuyla da başlatıp bitirebilirsin</p>`,
-    { ...actions, mic: () => toggle() },
-    {
-      onKey: (e, typing) => {
-        if (e.code !== 'Space' || typing) return false;
-        e.preventDefault();
-        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-        if (!e.repeat) toggle();
-        return true;
-      },
-    });
-    const wrap = scene.querySelector('.mic-wrap');
-    const label = scene.querySelector('.mic-label');
-    const time = scene.querySelector('.rec-time');
-    const wf = new Waveform(scene.querySelector('.live-wave'), { bars: 48 });
-    wf.setValues(levels);
-    wf.setProgress(1);
-    stage.own(() => {
-      wf.destroy();
-      if (stopLoop) stopLoop();
-      document.body.classList.remove('audio-focus');
-      if (state === 'opening' || state === 'rec') rec.close();
-    });
-    const lock = (on) => scene.querySelectorAll('[data-lock-rec]').forEach((b) => { b.disabled = on; });
-    const reset = () => {
-      state = 'idle';
-      scene.classList.remove('is-busy', 'is-rec', 'is-opening');
-      label.textContent = 'Kayda Başla';
-      time.textContent = '0,0 sn';
-      wrap.style.setProperty('--lvl', '0');
-      lock(false);
-    };
-
-    async function toggle() {
-      if (state === 'idle') {
-        state = 'opening';
-        stopClip();
-        lock(true);
-        scene.classList.add('is-opening');
-        label.textContent = 'Hazırlanıyor';
-        let ok = false;
-        try {
-          ok = await withPermissionHint(() => rec.begin());
-        } catch (err) {
-          if (!life.alive || stage.scene !== scene) return;
-          reset();
-          micError(err);
-          return;
-        }
-        if (!ok || !life.alive || stage.scene !== scene) {
-          rec.close();
-          return;
-        }
-        state = 'rec';
-        startAt = performance.now();
-        scene.classList.remove('is-opening');
-        scene.classList.add('is-rec');
-        document.body.classList.add('audio-focus');
-        label.textContent = 'Bitir';
-        let shown = '';
-        let frame = 0;
-        stopLoop = life.raf(() => {
-          const sec = (performance.now() - startAt) / 1000;
-          if (sec >= MAX_SEC) {
-            toggle();
-            return false;
-          }
-          const lv = rec.level();
-          wrap.style.setProperty('--lvl', Math.min(1, lv * 6).toFixed(3));
-          // Dalga çizimi saniyede 30 kare yeter
-          if (frame++ % 2 === 0) {
-            levels.push(Math.min(1, lv * 7 + 0.03));
-            levels.shift();
-            wf.setValues(levels);
-          }
-          const txt = `${fmtSec(Math.min(sec, MAX_SEC))} / ${MAX_SEC} sn`;
-          if (txt !== shown) {
-            shown = txt;
-            time.textContent = txt;
-          }
-          return true;
-        });
-      } else if (state === 'rec') {
-        state = 'busy';
-        if (stopLoop) {
-          stopLoop();
-          stopLoop = null;
-        }
-        document.body.classList.remove('audio-focus');
-        scene.classList.remove('is-rec');
-        scene.classList.add('is-busy');
-        label.textContent = 'Hazırlanıyor';
-        wrap.style.setProperty('--lvl', '0');
-        const raw = await rec.end();
-        if (!life.alive || stage.scene !== scene) return;
-        const clean = cleanClip(raw, rec.sampleRate);
-        if (!clean) {
-          reset();
-          sfx.boing();
-          toast('Ses duyamadım. Mikrofona biraz daha yakın konuşup tekrar dene.', { tone: 'warn' });
-          return;
-        }
-        onDone(makeBuffer(clean, rec.sampleRate));
       }
     }
   }

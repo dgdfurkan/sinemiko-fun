@@ -210,6 +210,33 @@ export const sfx = {
     hiss(c, { dur: 0.22, vol: 0.12, f: 900, f2: 3200, q: 1.1, attack: 0.03 });
     tone(c, { type: 'sine', f: 500, f2: 900, dur: 0.12, vol: 0.06 });
   },
+  deflate() {
+    const c = live(); if (!c) return;
+    const t = c.currentTime;
+    const src = c.createBufferSource();
+    src.buffer = noiseBuffer();
+    const f = c.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = 4;
+    f.frequency.setValueAtTime(1400, t);
+    f.frequency.exponentialRampToValueAtTime(260, t + 1.1);
+    const lfo = c.createOscillator();
+    lfo.frequency.value = 18;
+    const lg = c.createGain();
+    lg.gain.value = 220;
+    lfo.connect(lg);
+    lg.connect(f.frequency);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.32, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.15);
+    src.connect(f);
+    f.connect(g);
+    g.connect(bus('sfx'));
+    src.start(t, 0, 1.2);
+    lfo.start(t);
+    lfo.stop(t + 1.2);
+  },
   // Davul gürlemesi; süre saniye cinsinden
   drumroll(dur = 1.3) {
     const c = live(); if (!c) return;

@@ -156,6 +156,70 @@ export const ART = {
       <path d="M100 6 v-0 M64 30 l-8 -6 M136 30 l8 -6" ${I}/>
     </g>
   </svg>`,
+
+  chipmunk: `
+  <svg class="art art-chip" viewBox="0 0 200 150" aria-hidden="true">
+    <g class="art-chip-face">
+      <circle cx="62" cy="42" r="16" fill="#b97a45" ${I}/><circle cx="62" cy="42" r="7" fill="#ffb3c8"/>
+      <circle cx="138" cy="42" r="16" fill="#b97a45" ${I}/><circle cx="138" cy="42" r="7" fill="#ffb3c8"/>
+      <ellipse cx="100" cy="82" rx="54" ry="50" fill="#c98a52" ${I}/>
+      <ellipse cx="72" cy="98" rx="20" ry="16" fill="#f2cfa6"/><ellipse cx="128" cy="98" rx="20" ry="16" fill="#f2cfa6"/>
+      <ellipse cx="80" cy="72" rx="8" ry="10" fill="#fff" ${I} stroke-width="3"/><ellipse cx="120" cy="72" rx="8" ry="10" fill="#fff" ${I} stroke-width="3"/>
+      <circle cx="81" cy="74" r="4.5" fill="#2a1636"/><circle cx="121" cy="74" r="4.5" fill="#2a1636"/>
+      <ellipse cx="100" cy="88" rx="7" ry="5" fill="#2a1636"/>
+      <rect x="92" y="98" width="16" height="16" rx="3" fill="#fff" ${I} stroke-width="3"/><path d="M100 98v16" stroke="#2a1636" stroke-width="3"/>
+    </g>
+    <g class="art-speed"><path d="M14 64h28M8 82h30M16 100h22" ${I} stroke-width="5"/></g>
+    <g class="art-note n1"><path d="M166 40V18l14-3v18" fill="none" ${I}/><circle cx="162" cy="41" r="6" fill="#2a1636"/><circle cx="176" cy="35" r="6" fill="#2a1636"/></g>
+  </svg>`,
+
+  hum: `
+  <svg class="art art-hum" viewBox="0 0 200 150" aria-hidden="true">
+    <g class="art-hum-face">
+      <circle cx="86" cy="80" r="52" fill="#ffcd3c" ${I}/>
+      <path d="M62 70q8-8 16 0M94 70q8-8 16 0" fill="none" ${I}/>
+      <path d="M70 100q8 6 16 0t16 0" fill="none" ${I}/>
+      <ellipse cx="58" cy="88" rx="7" ry="5" fill="#ff8fab" opacity=".7"/><ellipse cx="114" cy="88" rx="7" ry="5" fill="#ff8fab" opacity=".7"/>
+    </g>
+    <g class="art-note n1"><path d="M150 52V28l16-4v22" fill="none" ${I}/><circle cx="146" cy="53" r="6.5" fill="#2a1636"/><circle cx="162" cy="47" r="6.5" fill="#2a1636"/></g>
+    <g class="art-note n2"><path d="M176 96V76" fill="none" ${I}/><circle cx="171" cy="97" r="6" fill="#2a1636"/><path d="M176 76l10 4" ${I}/></g>
+    <path class="art-wave" d="M140 120q8-10 16 0t16 0t16 0" fill="none" stroke="#2a1636" stroke-width="4" stroke-linecap="round"/>
+  </svg>`,
+
+  twister: `
+  <svg class="art art-twist" viewBox="0 0 200 150" aria-hidden="true">
+    <ellipse cx="74" cy="72" rx="58" ry="46" fill="#fff" ${I}/>
+    <path d="M38 64 Q74 44 110 64 Q74 112 38 64 Z" fill="#2a1636"/>
+    <g class="art-tongue"><path d="M92 82 C122 88 150 70 150 50 C150 32 128 30 124 46 C120 60 140 62 142 50" fill="none" stroke="#2a1636" stroke-width="17" stroke-linecap="round"/><path d="M92 82 C122 88 150 70 150 50 C150 32 128 30 124 46 C120 60 140 62 142 50" fill="none" stroke="#ff7a8f" stroke-width="10" stroke-linecap="round"/></g>
+    <g class="art-stars"><path d="M168 98l4 9 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z" fill="#ffcd3c" ${I} stroke-width="3"/></g>
+  </svg>`,
+
+  echo: `
+  <svg class="art art-echo" viewBox="0 0 200 150" aria-hidden="true">
+    <g class="art-echo-ph">
+      <path d="M40 92V74a40 40 0 0 1 80 0v18" fill="none" stroke="#2a1636" stroke-width="13" stroke-linecap="round"/>
+      <path d="M40 92V74a40 40 0 0 1 80 0v18" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+      <rect x="26" y="80" width="26" height="40" rx="11" fill="#2ed6a0" ${I}/>
+      <rect x="108" y="80" width="26" height="40" rx="11" fill="#2ed6a0" ${I}/>
+    </g>
+    <g class="art-arc a1"><path d="M146 62a22 22 0 0 1 0 40" fill="none" ${I} stroke-width="5"/></g>
+    <g class="art-arc a2"><path d="M160 50a40 40 0 0 1 0 64" fill="none" ${I} stroke-width="5"/></g>
+    <g class="art-arc a3"><path d="M174 38a58 58 0 0 1 0 88" fill="none" ${I} stroke-width="5"/></g>
+  </svg>`,
+
+  balloon: `
+  <svg class="art art-balloon" viewBox="0 0 200 150" aria-hidden="true">
+    <g class="art-bal">
+      <path d="M100 118 C94 128 106 136 98 148" stroke="#2a1636" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <path d="M93 114 L107 114 L100 122 Z" fill="#ff5a7a" ${I} stroke-width="3.5"/>
+      <path d="M100 8 C134 8 150 34 148 62 C146 92 124 114 100 114 C76 114 54 92 52 62 C50 34 66 8 100 8 Z" fill="#ff5a7a" ${I}/>
+      <ellipse cx="80" cy="34" rx="9" ry="16" transform="rotate(24 80 34)" fill="#fff" opacity=".45"/>
+      <ellipse cx="88" cy="62" rx="6" ry="8" fill="#fff" ${I} stroke-width="3"/><ellipse cx="112" cy="62" rx="6" ry="8" fill="#fff" ${I} stroke-width="3"/>
+      <circle cx="89" cy="64" r="3" fill="#2a1636"/><circle cx="113" cy="64" r="3" fill="#2a1636"/>
+      <ellipse cx="100" cy="82" rx="6" ry="7" fill="#2a1636"/>
+    </g>
+    <g class="art-puff"><path d="M30 116q10-8 20 0M24 98q12-10 24 0M156 110q10-8 20 0" fill="none" ${I} stroke-width="4"/></g>
+  </svg>`,
 };
 
 const likelyArt = () => html`<span class="art art-duo">${avatar(0, { pose: 'point-r', mood: 'smirk' })}<span class="lq">?</span>${avatar(1, { pose: 'point-l', mood: 'smirk' })}</span>`;

@@ -103,7 +103,8 @@ export class VoiceRecorder {
   }
 
   // Mikrofonu açar ve kayda başlar. Bu arada close() çağrılırsa false döner.
-  async begin() {
+  // monitor saniye verilirse kişi kendi sesini o kadar gecikmeyle kulaklıktan duyar.
+  async begin({ monitor = 0 } = {}) {
     const my = ++this.session;
     this.release();
     const ctx = ensureAudio();
@@ -120,6 +121,15 @@ export class VoiceRecorder {
     this.src.connect(this.node);
     this.node.connect(this.sink);
     this.sink.connect(ctx.destination);
+    if (monitor > 0) {
+      this.delay = ctx.createDelay(1);
+      this.delay.delayTime.value = monitor;
+      this.monitorGain = ctx.createGain();
+      this.monitorGain.gain.value = 0.95;
+      this.src.connect(this.delay);
+      this.delay.connect(this.monitorGain);
+      this.monitorGain.connect(ctx.destination);
+    }
     this.chunks = [];
     this.recording = true;
     if (!this.legacy) this.node.port.postMessage('start');
@@ -188,6 +198,10 @@ export class VoiceRecorder {
 
   // Mikrofonu bırakır; worklet düğümü sonraki kayıt için kalır
   release() {
+    try { this.delay && this.delay.disconnect(); } catch { /* bağlı değil */ }
+    try { this.monitorGain && this.monitorGain.disconnect(); } catch { /* bağlı değil */ }
+    this.delay = null;
+    this.monitorGain = null;
     try { this.src && this.src.disconnect(); } catch { /* bağlı değil */ }
     try { this.node && this.node.disconnect(); } catch { /* bağlı değil */ }
     try { this.sink && this.sink.disconnect(); } catch { /* bağlı değil */ }
@@ -206,6 +220,26 @@ export class VoiceRecorder {
     if (this.node && !this.legacy) this.node.port.postMessage('stop');
     this.release();
   }
+}
+
+// Kayıttaki sesli bölümün süresi (ilk ve son sesli an arası), saniye
+export function voicedDuration(samples, sr) {
+  const win = Math.max(1, Math.floor(sr * 0.01));
+  let peak = 0;
+  const rms = [];
+  for (let i = 0; i + win <= samples.length; i += win) {
+    let s = 0;
+    for (let j = i; j < i + win; j++) s += samples[j] * samples[j];
+    const r = Math.sqrt(s / win);
+    rms.push(r);
+    if (r > peak) peak = r;
+  }
+  if (!peak) return 0;
+  const thr = peak * 0.12;
+  const first = rms.findIndex((r) => r > thr);
+  let last = rms.length - 1;
+  while (last > first && rms[last] <= thr) last--;
+  return ((last - first + 1) * win) / sr;
 }
 
 // Baştaki ve sondaki sessizliği at, tepe değeri dengele, uçlara yumuşak geçiş koy

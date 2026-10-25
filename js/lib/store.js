@@ -28,6 +28,7 @@ function load() {
     bubbles: bool(saved.bubbles, true),
     popped: num(saved.popped, 0, 0, 1e9),
     maskVol: num(saved.maskVol, 0.7),
+    homeTab: typeof saved.homeTab === 'string' ? saved.homeTab : 'all',
     best: { ...best },
   };
 }

@@ -29,12 +29,14 @@ export function stopClip() {
 
 export const isPlaying = () => !!current;
 
-// Tek seferde tek klip çalar; onEnd(stopped) her durumda bir kez çağrılır
-export function playClip(buffer, { onProgress, onEnd } = {}) {
+// Tek seferde tek klip çalar; onEnd(stopped) her durumda bir kez çağrılır.
+// rate 1'den büyükse ses incelir ve hızlanır (sincap), küçükse kalınlaşır ve yavaşlar (dev).
+export function playClip(buffer, { onProgress, onEnd, rate = 1 } = {}) {
   stopClip();
   const ctx = getCtx();
   const src = ctx.createBufferSource();
   src.buffer = buffer;
+  src.playbackRate.value = rate;
   src.connect(bus('clips'));
   const startAt = ctx.currentTime + 0.03;
   const handle = { src, stopped: false, ended: false };
@@ -56,7 +58,7 @@ export function playClip(buffer, { onProgress, onEnd } = {}) {
   if (onProgress) {
     const loop = () => {
       if (handle.ended) return;
-      const p = Math.min(1, Math.max(0, (ctx.currentTime - startAt) / buffer.duration));
+      const p = Math.min(1, Math.max(0, ((ctx.currentTime - startAt) * rate) / buffer.duration));
       onProgress(p);
       requestAnimationFrame(loop);
     };

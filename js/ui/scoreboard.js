@@ -65,6 +65,13 @@ export const scoreboard = {
   get team() {
     return team;
   },
+  // Puan yerine serbest bir değer gösterir (örneğin en iyi süre)
+  setText(i, text) {
+    const target = root && root.querySelector(`[data-score="${i}"]`);
+    if (!target || target.textContent === text) return;
+    target.textContent = text;
+    bump(target.closest('.sb-p'));
+  },
   // Puanı ekler; from verilirse "+3" rozeti o noktadan tabelaya uçar
   add(i, pts, from) {
     if (!root || !pts) return Promise.resolve();
