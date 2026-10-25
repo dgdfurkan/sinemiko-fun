@@ -180,6 +180,36 @@ export const sfx = {
     lfo.start(t);
     lfo.stop(t + 0.72);
   },
+  boom() {
+    const c = live(); if (!c) return;
+    const t = c.currentTime;
+    tone(c, { type: 'sine', f: 130, f2: 28, t, dur: 1, vol: 0.55, attack: 0.002 });
+    hiss(c, { t, dur: 1.3, vol: 0.38, type: 'lowpass', f: 2600, f2: 180, q: 0.4, attack: 0.002 });
+    hiss(c, { t: t + 0.02, dur: 0.45, vol: 0.22, type: 'bandpass', f: 900, q: 0.5, attack: 0.002 });
+  },
+  fuse() {
+    const c = live(); if (!c) return;
+    hiss(c, { dur: 0.05 + Math.random() * 0.05, vol: 0.035, type: 'highpass', f: 3500 + Math.random() * 3000, attack: 0.002 });
+  },
+  bombTick(p = 0) {
+    const c = live(); if (!c) return;
+    tone(c, { type: 'square', f: 1100 + p * 500, dur: 0.035, vol: 0.06, attack: 0.001 });
+    tone(c, { type: 'sine', f: 220, f2: 140, dur: 0.06, vol: 0.12 });
+  },
+  signal() {
+    const c = live(); if (!c) return;
+    [988, 1319, 1976].forEach((f, i) => tone(c, { type: 'triangle', f, t: c.currentTime + i * 0.012, dur: 0.32, vol: 0.12 }));
+  },
+  error() {
+    const c = live(); if (!c) return;
+    tone(c, { type: 'square', f: 240, f2: 110, dur: 0.38, vol: 0.09 });
+    tone(c, { type: 'square', f: 246, f2: 113, dur: 0.38, vol: 0.06 });
+  },
+  pass() {
+    const c = live(); if (!c) return;
+    hiss(c, { dur: 0.22, vol: 0.12, f: 900, f2: 3200, q: 1.1, attack: 0.03 });
+    tone(c, { type: 'sine', f: 500, f2: 900, dur: 0.12, vol: 0.06 });
+  },
   // Davul gürlemesi; süre saniye cinsinden
   drumroll(dur = 1.3) {
     const c = live(); if (!c) return;

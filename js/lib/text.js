@@ -81,6 +81,14 @@ export function accusative(name) {
   return `${name}'${endsWithVowel(name) ? 'y' : ''}${map[v] || 'i'}`;
 }
 
+// Furkan'da, Sinem'de, Ahmet'te
+export function locative(name) {
+  const v = lastVowel(name);
+  const back = 'aıou'.includes(v);
+  const hard = 'fstkçşhpFSTKÇŞHP'.includes(name[name.length - 1]);
+  return `${name}'${hard ? 't' : 'd'}${back ? 'a' : 'e'}`;
+}
+
 export const fmtSec = (s) => `${(Math.round(s * 10) / 10).toFixed(1).replace('.', ',')} sn`;
 
 // Soru eki: "Rap mı", "Deniz mi", "Kumsal mı", "Gül mü"

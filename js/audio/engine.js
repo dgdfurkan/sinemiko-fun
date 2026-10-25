@@ -13,7 +13,8 @@ export function ensureAudio() {
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
-    ctx = new AC({ latencyHint: 'interactive' });
+    // 'balanced' daha büyük tampon kullanır; yoğun anda ses kesilmesini önler
+    ctx = new AC({ latencyHint: 'balanced' });
     const limiter = ctx.createDynamicsCompressor();
     limiter.threshold.value = -4;
     limiter.knee.value = 6;
@@ -21,11 +22,14 @@ export function ensureAudio() {
     limiter.attack.value = 0.003;
     limiter.release.value = 0.2;
     limiter.connect(ctx.destination);
-    for (const name of ['music', 'mask', 'sfx', 'clips']) {
+    for (const name of ['music', 'mask', 'sfx']) {
       const g = ctx.createGain();
       g.connect(limiter);
       buses[name] = g;
     }
+    // Ses kayıtları sıkıştırıcıya girmez; zaten dengelenmiş durumda, sıkıştırma pompalama yapar
+    buses.clips = ctx.createGain();
+    buses.clips.connect(ctx.destination);
     buses.mask.gain.value = 0;
   }
   if (ctx.state === 'suspended') ctx.resume().catch(() => {});

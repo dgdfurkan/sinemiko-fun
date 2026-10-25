@@ -193,6 +193,7 @@ async function doRoute() {
     setTheme('home');
     current = { key: 'home', inst: mountHome(view, { navigate }) };
   }
+  window.dispatchEvent(new Event('sf:scene'));
   await reveal();
 }
 

@@ -24,6 +24,7 @@ export function stopClip() {
   h.stopped = true;
   try { h.src.stop(); } catch { /* zaten durmuş */ }
   music.duck('clip', false);
+  document.body.classList.remove('audio-focus');
 }
 
 export const isPlaying = () => !!current;
@@ -38,12 +39,14 @@ export function playClip(buffer, { onProgress, onEnd } = {}) {
   const startAt = ctx.currentTime + 0.03;
   const handle = { src, stopped: false, ended: false };
   music.duck('clip', true);
+  document.body.classList.add('audio-focus');
   src.onended = () => {
     if (handle.ended) return;
     handle.ended = true;
     if (current === handle) {
       current = null;
       music.duck('clip', false);
+      document.body.classList.remove('audio-focus');
     }
     if (onProgress) onProgress(handle.stopped ? 0 : 1);
     if (onEnd) onEnd(handle.stopped);

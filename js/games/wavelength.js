@@ -101,7 +101,7 @@ export function mount(view, { game, navigate }) {
       game,
       rules: [
         'İpucu veren, kadranın üstündeki gizli hedefi görür. Diğeri o sırada bakmaz.',
-        'Hedef kapanınca ipucu veren tek bir ipucu söyler. Örneğin "Soğuk ile Sıcak" arasında "Çorba".',
+        'Hedef kapanınca ipucu veren tek bir ipucu söyler. Örneğin “Soğuk ile Sıcak” arasında “Çorba”.',
         'Tahminci ibreyi çevirir ve kilitler. Hedefin ortasına ne kadar yakınsa takım o kadar puan alır.',
       ],
       options: html`

@@ -31,7 +31,7 @@ export function mount(view, { game, navigate }) {
     const scene = stage.show(lobbyHTML({
       game,
       rules: [
-        'Ekranda bir soru belirir: "Kim film izlerken uyuyakalır?" gibi.',
+        'Ekranda bir soru belirir: “Kim film izlerken uyuyakalır?” gibi.',
         'Üçe kadar sayılır. İkiniz de aynı anda o kişiyi parmağınızla gösterirsiniz.',
         'Kimin seçildiğini işaretleyin. Sonunda kimin hangi unvanı aldığını ve ne kadar anlaştığınızı görün.',
       ],
@@ -108,7 +108,7 @@ export function mount(view, { game, navigate }) {
           <div class="duo-slot">${avatar(1, { pose: 'point-l', mood: 'smirk' })}</div>
         </div>
         <h2 class="t-title" data-in>Anlaşamadınız!</h2>
-        <p class="t-lead" data-in>"${q}" Bu konuyu biraz konuşmanız lazım.</p>`;
+        <p class="t-lead" data-in>“${q}” Bu konuyu biraz konuşmanız lazım.</p>`;
     } else {
       const i = Number(who);
       g.agree++;

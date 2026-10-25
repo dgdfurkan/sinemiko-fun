@@ -55,6 +55,12 @@ body[data-theme="likely"]     { --accent: var(--tang);   --accent-d: var(--tang-
 body[data-theme="thisorthat"] { --accent: var(--sky);    --accent-d: var(--sky-d);    --accent-soft: #d6eeff; --wash-a: #6cc4ff5c; --wash-b: #ff8cc055; }
 body[data-theme="wavelength"] { --accent: var(--sun);    --accent-d: var(--sun-d);    --accent-soft: #fff0c2; --wash-a: #ffd2506a; --wash-b: #7ec8ff4c; }
 body[data-theme="emoji"]      { --accent: var(--lilac);  --accent-d: var(--lilac-d);  --accent-soft: #ebe3ff; --wash-a: #b79cff5c; --wash-b: #ffd96a5c; }
+body[data-theme="bomb"]       { --accent: #f2542d; --accent-d: #d13a14; --accent-soft: #ffe0d6; --wash-a: #ff8a5c55; --wash-b: #8f7cc455; }
+body[data-theme="reflex"]     { --accent: #79c81f; --accent-d: #5ea316; --accent-soft: #e4f7c9; --wash-a: #a6e35a5a; --wash-b: #6cc4ff44; }
+body[data-theme="draw"]       { --accent: #12bccb; --accent-d: #0b98a4; --accent-soft: #d2f6f8; --wash-a: #5fdbe555; --wash-b: #ff8cc04c; }
+body[data-theme="tabu"]       { --accent: #c94fe0; --accent-d: #a634bd; --accent-soft: #f6dcfb; --wash-a: #e08cf25a; --wash-b: #ffd96a55; }
+body[data-theme="quiz"]       { --accent: #5f6fff; --accent-d: #4453e6; --accent-soft: #e0e4ff; --wash-a: #8f9cff55; --wash-b: #ff8cc04c; }
+body[data-theme="meld"]       { --accent: #ff7aa8; --accent-d: #e8558a; --accent-soft: #ffe1ec; --wash-a: #ff9ec955; --wash-b: #ffd96a66; }
 body[data-theme="truthdare"]  { --accent: var(--cherry); --accent-d: var(--cherry-d); --accent-soft: #ffdade; --wash-a: #ff6f805a; --wash-b: #ffd96a66; }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -89,7 +95,10 @@ img, svg, canvas { display: block; }
   background-size: 240px 240px;
   animation: patternDrift 46s linear infinite;
 }
-.grain { position: absolute; inset: 0; opacity: .22; mix-blend-mode: multiply; background-size: 220px 220px; }
+.grain { position: absolute; inset: 0; opacity: .12; background-size: 220px 220px; }
+.pattern, .wash { will-change: transform; }
+/* Kayıt ve dinleme sırasında arka plan hareketi durur, tüm güç sese kalır */
+body.audio-focus .pattern, body.audio-focus .wash { animation-play-state: paused; }
 @keyframes patternDrift { to { transform: translate3d(240px, 240px, 0); } }
 @keyframes washDrift {
   0%   { transform: translate3d(0, 0, 0) rotate(0deg); }

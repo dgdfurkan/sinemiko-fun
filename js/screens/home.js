@@ -20,13 +20,14 @@ const TILTS = ['-1.4deg', '1.2deg', '-.8deg', '1.6deg', '.9deg', '-1.5deg', '1de
 
 function cardHTML(g, i) {
   return html`
-    <button class="gcard ${i === 0 ? 'featured' : ''}" data-game="${g.id}" style="--gc:${g.card};--tilt:${TILTS[i % TILTS.length]};--d:${i * 60}ms">
+    <button class="gcard ${i === 0 ? 'featured' : ''} ${g.dark ? 'dark' : ''}" data-game="${g.id}" style="--gc:${g.card};--tilt:${TILTS[i % TILTS.length]};--d:${i * 45}ms">
       <span class="gcard-dots" aria-hidden="true"></span>
+      ${g.isNew ? html`<span class="gcard-new" aria-hidden="true">Yeni</span>` : ''}
       ${g.tags.length ? html`<span class="gcard-tags">${g.tags.map(([ic, t]) => html`<span class="tag">${icon(ic)}${t}</span>`)}</span>` : ''}
       <span class="gcard-art">${artFor(g.id)}</span>
       <span class="gcard-text">
         <span class="gcard-title">${g.title}</span>
-        <span class="gcard-desc">${g.desc}</span>
+        <span class="gcard-desc">${i === 0 ? g.desc : g.tagline}</span>
       </span>
       <span class="gcard-go" aria-hidden="true">${icon('arrow')}</span>
     </button>`;

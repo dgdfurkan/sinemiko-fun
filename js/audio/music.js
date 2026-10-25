@@ -347,6 +347,8 @@ let timer = 0;
 let nextTime = 0;
 let stepIdx = 0;
 let duckNode = null;
+let paused = false;
+let pauseTimer = 0;
 const duckReasons = new Set();
 
 function ensureGraph(ctx) {
@@ -358,7 +360,7 @@ function ensureGraph(ctx) {
 
 function tick() {
   const ctx = getCtx();
-  if (!ctx || !song) return;
+  if (!ctx || !song || paused) return;
   const sd = 60 / song.bpm / 4;
   if (nextTime < ctx.currentTime - 0.3) nextTime = ctx.currentTime + 0.06;
   while (nextTime < ctx.currentTime + 0.15) {
@@ -386,6 +388,7 @@ export const music = {
     song.name = name;
     stepIdx = 0;
     nextTime = ctx.currentTime + 0.08;
+    paused = name === 'chill' && duckReasons.size > 0;
     const g = song.master.gain;
     g.setValueAtTime(0.0001, ctx.currentTime);
     g.exponentialRampToValueAtTime(song.level, ctx.currentTime + 0.7);
@@ -418,6 +421,14 @@ export const music = {
     g.cancelScheduledValues(now);
     g.setValueAtTime(Math.max(0.0001, g.value), now);
     g.setTargetAtTime(duckReasons.size ? 0.0001 : 1, now, duckReasons.size ? 0.04 : 0.3);
+    // Kısıkken nota üretmeyi tamamen durdur; kayıt ve dinleme sırasında ses motoru boş kalsın
+    clearTimeout(pauseTimer);
+    if (duckReasons.size) {
+      pauseTimer = setTimeout(() => { if (song && song.name === 'chill' && duckReasons.size) paused = true; }, 300);
+    } else if (paused) {
+      paused = false;
+      nextTime = ctx.currentTime + 0.05;
+    }
   },
   get name() {
     return song ? song.name : null;

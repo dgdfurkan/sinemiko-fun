@@ -116,10 +116,10 @@ export function mount(view, { game, navigate }) {
   }
 
   // İzin penceresi açık kalırsa kullanıcıya nereye bakacağını söyle
-  async function openMic() {
+  async function withPermissionHint(task) {
     const hint = setTimeout(() => toast('Tarayıcı mikrofon izni soruyor. Adres çubuğunun yanındaki pencereden izin ver.', { tone: 'pink', ms: 5000 }), 1200);
     try {
-      await rec.open();
+      return await task();
     } finally {
       clearTimeout(hint);
     }
@@ -169,7 +169,7 @@ export function mount(view, { game, navigate }) {
     const btn = stage.scene.querySelector('[data-act="start"], [data-act="again"]');
     if (btn) btn.disabled = true;
     try {
-      await openMic();
+      await withPermissionHint(() => rec.warmup());
     } catch (err) {
       starting = false;
       if (!life.alive) return;
@@ -178,10 +178,7 @@ export function mount(view, { game, navigate }) {
       return;
     }
     starting = false;
-    if (!life.alive) {
-      rec.close();
-      return;
-    }
+    if (!life.alive) return;
     g = { round: 0, total: cfg.rounds, first: 0, deck: buildDeck(), archive: [], over: false, cur: null };
     scoreboard.show({ mode: 'versus', mid: `Tur 1 / ${g.total}` });
     g.first = cfg.first === 'random' ? await coinFlip(stage, life, { title: 'İlk Kim Söylüyor?' }) : Number(cfg.first);
@@ -335,46 +332,65 @@ export function mount(view, { game, navigate }) {
     stage.own(() => {
       wf.destroy();
       if (stopLoop) stopLoop();
-      if (state === 'rec') rec.stop();
+      document.body.classList.remove('audio-focus');
+      if (state === 'opening' || state === 'rec') rec.close();
     });
     const lock = (on) => scene.querySelectorAll('[data-lock-rec]').forEach((b) => { b.disabled = on; });
+    const reset = () => {
+      state = 'idle';
+      scene.classList.remove('is-busy', 'is-rec', 'is-opening');
+      label.textContent = 'Kayda Başla';
+      time.textContent = '0,0 sn';
+      wrap.style.setProperty('--lvl', '0');
+      lock(false);
+    };
 
     async function toggle() {
       if (state === 'idle') {
         state = 'opening';
-        if (!rec.ready) {
-          try {
-            await openMic();
-          } catch (err) {
-            state = 'idle';
-            if (life.alive) micError(err);
-            return;
-          }
-          if (!life.alive) {
-            rec.close();
-            return;
-          }
-        }
-        if (stage.scene !== scene) return;
         stopClip();
-        rec.start();
+        lock(true);
+        scene.classList.add('is-opening');
+        label.textContent = 'Hazırlanıyor';
+        let ok = false;
+        try {
+          ok = await withPermissionHint(() => rec.begin());
+        } catch (err) {
+          if (!life.alive || stage.scene !== scene) return;
+          reset();
+          micError(err);
+          return;
+        }
+        if (!ok || !life.alive || stage.scene !== scene) {
+          rec.close();
+          return;
+        }
         state = 'rec';
         startAt = performance.now();
+        scene.classList.remove('is-opening');
         scene.classList.add('is-rec');
+        document.body.classList.add('audio-focus');
         label.textContent = 'Bitir';
-        lock(true);
-        sfx.soft();
+        let shown = '';
+        let frame = 0;
         stopLoop = life.raf(() => {
-          const lv = rec.level();
-          wrap.style.setProperty('--lvl', Math.min(1, lv * 6).toFixed(3));
-          levels.push(Math.min(1, lv * 7 + 0.03));
-          levels.shift();
-          wf.setValues(levels);
           const sec = (performance.now() - startAt) / 1000;
-          time.textContent = `${fmtSec(Math.min(sec, MAX_SEC))} / ${MAX_SEC} sn`;
           if (sec >= MAX_SEC) {
             toggle();
             return false;
+          }
+          const lv = rec.level();
+          wrap.style.setProperty('--lvl', Math.min(1, lv * 6).toFixed(3));
+          // Dalga çizimi saniyede 30 kare yeter
+          if (frame++ % 2 === 0) {
+            levels.push(Math.min(1, lv * 7 + 0.03));
+            levels.shift();
+            wf.setValues(levels);
+          }
+          const txt = `${fmtSec(Math.min(sec, MAX_SEC))} / ${MAX_SEC} sn`;
+          if (txt !== shown) {
+            shown = txt;
+            time.textContent = txt;
           }
           return true;
         });
@@ -384,19 +400,16 @@ export function mount(view, { game, navigate }) {
           stopLoop();
           stopLoop = null;
         }
+        document.body.classList.remove('audio-focus');
         scene.classList.remove('is-rec');
         scene.classList.add('is-busy');
         label.textContent = 'Hazırlanıyor';
         wrap.style.setProperty('--lvl', '0');
-        const raw = await rec.stop();
+        const raw = await rec.end();
         if (!life.alive || stage.scene !== scene) return;
         const clean = cleanClip(raw, rec.sampleRate);
         if (!clean) {
-          state = 'idle';
-          scene.classList.remove('is-busy');
-          label.textContent = 'Kayda Başla';
-          time.textContent = '0,0 sn';
-          lock(false);
+          reset();
           sfx.boing();
           toast('Ses duyamadım. Mikrofona biraz daha yakın konuşup tekrar dene.', { tone: 'warn' });
           return;

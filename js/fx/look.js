@@ -42,6 +42,9 @@ export function initLook() {
       idleTimer = setTimeout(glance, 2500 + Math.random() * 3000);
     }, 6000);
   }, { passive: true });
-  // Yeni sahneler eklendiğinde de doğru yöne baksınlar
-  new MutationObserver(queue).observe(document.getElementById('app'), { childList: true, subtree: true });
+  // Yeni sahne gelince, giriş animasyonu bitince bir kez güncelle; DOM'u sürekli izleme
+  window.addEventListener('sf:scene', () => {
+    setTimeout(queue, 60);
+    setTimeout(queue, 700);
+  });
 }

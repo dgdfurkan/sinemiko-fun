@@ -87,6 +87,7 @@ export class Stage {
         { duration: 560, delay: 90 + i * 70, easing: 'cubic-bezier(.34,1.56,.64,1)', fill: 'backwards' },
       );
     });
+    window.dispatchEvent(new Event('sf:scene'));
     const auto = scene.querySelector('[autofocus]');
     if (auto) setTimeout(() => auto.focus({ preventScroll: true }), 380);
     return scene;

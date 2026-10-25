@@ -1,4 +1,6 @@
-// Mikrofon kaydı: ham PCM toplar, sessizliği kırpar, sesi dengeler
+// Mikrofon kaydı: ham PCM toplar, sessizliği kırpar, sesi dengeler.
+// Mikrofon yalnızca kayıt sırasında açık kalır. Açık kalırsa Bluetooth kulaklıklar
+// düşük kaliteli telefon moduna geçer ve kayıtları dinlerken ses kesik kesik gelir.
 
 import { ensureAudio, getCtx } from './engine.js';
 
@@ -9,6 +11,11 @@ async function loadWorklet(ctx) {
   await ctx.audioWorklet.addModule(new URL('./capture-worklet.js', import.meta.url));
   loadedContexts.add(ctx);
 }
+
+// Tarayıcının ses işlemesi kapalı; gürültü bastırma heceleri keser, ters çalınca kesik duyulur
+const CONSTRAINTS = {
+  audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 },
+};
 
 export function micSupport() {
   if (!window.isSecureContext) return 'insecure';
@@ -26,47 +33,59 @@ export function micErrorText(err) {
   return 'Mikrofon açılamadı. Sayfayı yenileyip tekrar dene.';
 }
 
+async function getStream() {
+  const support = micSupport();
+  if (support !== 'ok') {
+    const e = new Error(support);
+    e.name = support;
+    throw e;
+  }
+  return navigator.mediaDevices.getUserMedia(CONSTRAINTS);
+}
+
+const stopStream = (stream) => {
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+};
+
 export class VoiceRecorder {
   constructor() {
     this.stream = null;
+    this.src = null;
     this.node = null;
+    this.sink = null;
+    this.analyser = null;
     this.chunks = [];
     this.recording = false;
     this.legacy = false;
     this.pendingStop = null;
-  }
-
-  get ready() {
-    return !!this.stream && this.stream.getAudioTracks().some((t) => t.readyState === 'live');
+    this.session = 0;
   }
 
   get sampleRate() {
     return getCtx().sampleRate;
   }
 
-  async open() {
-    if (this.ready) return;
-    this.close();
-    const support = micSupport();
-    if (support !== 'ok') {
-      const e = new Error(support);
-      e.name = support;
-      throw e;
-    }
+  get active() {
+    return this.recording;
+  }
+
+  // Oyun başında izni bir kez sor, mikrofonu hemen bırak
+  async warmup() {
     const ctx = ensureAudio();
     if (ctx.state !== 'running') await ctx.resume();
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
-    });
-    this.src = ctx.createMediaStreamSource(this.stream);
+    const stream = await getStream();
+    stopStream(stream);
+    await this.ensureNode(ctx);
+  }
+
+  async ensureNode(ctx) {
+    if (this.node) return;
+    this.sink = ctx.createGain();
+    this.sink.gain.value = 0;
     this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = 1024;
     this.analyser.smoothingTimeConstant = 0.5;
     this.levelBuf = new Float32Array(this.analyser.fftSize);
-    this.src.connect(this.analyser);
-    this.sink = ctx.createGain();
-    this.sink.gain.value = 0;
-    this.sink.connect(ctx.destination);
     try {
       if (!ctx.audioWorklet) throw new Error('no worklet');
       await loadWorklet(ctx);
@@ -81,8 +100,59 @@ export class VoiceRecorder {
       };
       this.legacy = true;
     }
+  }
+
+  // Mikrofonu açar ve kayda başlar. Bu arada close() çağrılırsa false döner.
+  async begin() {
+    const my = ++this.session;
+    this.release();
+    const ctx = ensureAudio();
+    if (ctx.state !== 'running') await ctx.resume();
+    await this.ensureNode(ctx);
+    const stream = await getStream();
+    if (my !== this.session) {
+      stopStream(stream);
+      return false;
+    }
+    this.stream = stream;
+    this.src = ctx.createMediaStreamSource(stream);
+    this.src.connect(this.analyser);
     this.src.connect(this.node);
     this.node.connect(this.sink);
+    this.sink.connect(ctx.destination);
+    this.chunks = [];
+    this.recording = true;
+    if (!this.legacy) this.node.port.postMessage('start');
+    return true;
+  }
+
+  // Kaydı bitirir, mikrofonu kapatır, ham örnekleri döner
+  async end() {
+    if (!this.recording) {
+      this.release();
+      return new Float32Array(0);
+    }
+    this.recording = false;
+    let raw;
+    if (this.legacy) {
+      raw = this.collect();
+    } else {
+      raw = await new Promise((resolve) => {
+        this.pendingStop = resolve;
+        this.node.port.postMessage('stop');
+        // Worklet cevap vermezse elde olanla devam et
+        setTimeout(() => {
+          if (this.pendingStop === resolve) {
+            this.pendingStop = null;
+            resolve(this.collect());
+          }
+        }, 800);
+      });
+    }
+    this.release();
+    // Mikrofon açılırken oluşabilecek tıkırtıyı at
+    const skip = Math.min(raw.length, Math.floor(this.sampleRate * 0.06));
+    return raw.subarray(skip);
   }
 
   onMessage(data) {
@@ -92,37 +162,16 @@ export class VoiceRecorder {
       if (done) done(this.collect());
       return;
     }
-    if (data instanceof Float32Array) this.chunks.push(data);
+    if (data instanceof Float32Array && this.recording) this.chunks.push(data);
+    else if (data instanceof Float32Array && this.pendingStop) this.chunks.push(data);
   }
 
   level() {
-    if (!this.analyser) return 0;
+    if (!this.analyser || !this.recording) return 0;
     this.analyser.getFloatTimeDomainData(this.levelBuf);
     let sum = 0;
     for (let i = 0; i < this.levelBuf.length; i++) sum += this.levelBuf[i] * this.levelBuf[i];
     return Math.sqrt(sum / this.levelBuf.length);
-  }
-
-  start() {
-    this.chunks = [];
-    this.recording = true;
-    if (!this.legacy) this.node.port.postMessage('start');
-  }
-
-  stop() {
-    this.recording = false;
-    if (this.legacy) return Promise.resolve(this.collect());
-    return new Promise((resolve) => {
-      this.pendingStop = resolve;
-      this.node.port.postMessage('stop');
-      // Worklet cevap vermezse elde olanla devam et
-      setTimeout(() => {
-        if (this.pendingStop === resolve) {
-          this.pendingStop = null;
-          resolve(this.collect());
-        }
-      }, 800);
-    });
   }
 
   collect() {
@@ -137,22 +186,25 @@ export class VoiceRecorder {
     return out;
   }
 
+  // Mikrofonu bırakır; worklet düğümü sonraki kayıt için kalır
+  release() {
+    try { this.src && this.src.disconnect(); } catch { /* bağlı değil */ }
+    try { this.node && this.node.disconnect(); } catch { /* bağlı değil */ }
+    try { this.sink && this.sink.disconnect(); } catch { /* bağlı değil */ }
+    stopStream(this.stream);
+    this.stream = null;
+    this.src = null;
+  }
+
   close() {
+    this.session++;
     this.recording = false;
     if (this.pendingStop) {
       this.pendingStop(new Float32Array(0));
       this.pendingStop = null;
     }
-    try { this.src && this.src.disconnect(); } catch { /* bağlı değil */ }
-    try { this.node && this.node.disconnect(); } catch { /* bağlı değil */ }
-    try { this.sink && this.sink.disconnect(); } catch { /* bağlı değil */ }
-    if (this.node && this.node.port) this.node.port.onmessage = null;
-    if (this.stream) this.stream.getTracks().forEach((t) => t.stop());
-    this.stream = null;
-    this.node = null;
-    this.src = null;
-    this.sink = null;
-    this.analyser = null;
+    if (this.node && !this.legacy) this.node.port.postMessage('stop');
+    this.release();
   }
 }
 
@@ -169,19 +221,26 @@ export function cleanClip(raw, sr) {
     rms.push(r);
     if (r > peakRms) peakRms = r;
   }
-  if (peakRms < 0.006) return null;
-  const thr = Math.max(0.004, peakRms * 0.09);
-  let first = rms.findIndex((r) => r > thr);
+  if (peakRms < 0.004) return null;
+  const thr = Math.max(0.003, peakRms * 0.08);
+  const first = rms.findIndex((r) => r > thr);
   let last = rms.length - 1;
   while (last > first && rms[last] <= thr) last--;
-  const start = Math.max(0, first * win - Math.floor(sr * 0.1));
-  const end = Math.min(raw.length, (last + 1) * win + Math.floor(sr * 0.16));
+  const start = Math.max(0, first * win - Math.floor(sr * 0.12));
+  const end = Math.min(raw.length, (last + 1) * win + Math.floor(sr * 0.18));
   const out = raw.slice(start, end);
+  // Ortalama kaymasını (DC) temizle, yoksa ters çalınca boğuk tık duyulur
+  let mean = 0;
+  for (let i = 0; i < out.length; i++) mean += out[i];
+  mean /= out.length || 1;
   let peak = 0;
-  for (let i = 0; i < out.length; i++) peak = Math.max(peak, Math.abs(out[i]));
-  const gain = Math.min(0.9 / Math.max(peak, 1e-4), 12);
+  for (let i = 0; i < out.length; i++) {
+    out[i] -= mean;
+    peak = Math.max(peak, Math.abs(out[i]));
+  }
+  const gain = Math.min(0.89 / Math.max(peak, 1e-4), 10);
   for (let i = 0; i < out.length; i++) out[i] *= gain;
-  const fade = Math.min(Math.floor(sr * 0.012), Math.floor(out.length / 4));
+  const fade = Math.min(Math.floor(sr * 0.015), Math.floor(out.length / 4));
   for (let i = 0; i < fade; i++) {
     const k = i / fade;
     out[i] *= k;
