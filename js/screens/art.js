@@ -157,6 +157,109 @@ export const ART = {
     </g>
   </svg>`,
 
+  pose: `
+  <svg class="art art-pose" viewBox="0 0 200 150" aria-hidden="true">
+    <path d="M30 34V20h16M170 34V20h-16M30 118v14h16M170 118v14h-16" fill="none" ${I} stroke-width="5"/>
+    <circle class="art-rec" cx="48" cy="40" r="5.5" fill="#ff4f62"/>
+    <g class="art-fig">
+      <path d="M93 104l-6 30M107 104l6 30" ${I} stroke-width="12"/>
+      <path d="M93 104l-6 30M107 104l6 30" stroke="#ffcd3c" stroke-width="6" stroke-linecap="round"/>
+      <path d="M88 72h24l-3 34H91z" fill="#ffcd3c" ${I} stroke-width="4"/>
+      <g class="art-arm-l"><path d="M89 74L74 54L64 34" fill="none" ${I} stroke-width="12"/><path d="M89 74L74 54L64 34" fill="none" stroke="#ffcd3c" stroke-width="6" stroke-linecap="round"/><circle cx="64" cy="34" r="6" fill="#fff" ${I} stroke-width="3.5"/></g>
+      <g class="art-arm-r"><path d="M111 74L126 54L136 34" fill="none" ${I} stroke-width="12"/><path d="M111 74L126 54L136 34" fill="none" stroke="#ffcd3c" stroke-width="6" stroke-linecap="round"/><circle cx="136" cy="34" r="6" fill="#fff" ${I} stroke-width="3.5"/></g>
+      <circle cx="100" cy="54" r="14" fill="#ffcd3c" ${I} stroke-width="4"/>
+      <circle cx="95" cy="52" r="2.4" fill="#2a1636"/><circle cx="105" cy="52" r="2.4" fill="#2a1636"/>
+      <path d="M94 58q6 5 12 0" fill="none" ${I} stroke-width="3"/>
+    </g>
+    <g class="art-badge"><path d="M160 54l4 9 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z" fill="#fff" ${I} stroke-width="3"/></g>
+  </svg>`,
+
+  popper: `
+  <svg class="art art-popper" viewBox="0 0 200 150" aria-hidden="true">
+    <g class="art-bub b1"><circle cx="56" cy="98" r="22" fill="#ffc2dc" ${I}/><path d="M44 90a14 14 0 0 1 8-8" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/></g>
+    <g class="art-bub b2"><circle cx="94" cy="56" r="17" fill="#c6f28e" ${I}/><path d="M85 50a10 10 0 0 1 6-6" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/></g>
+    <g class="art-bub b3"><circle cx="150" cy="42" r="19" fill="#ffcd3c" ${I}/><text x="150" y="49" text-anchor="middle" font-family="Lilita One, sans-serif" font-size="19" fill="#2a1636">+3</text></g>
+    <g class="art-pop"><path d="M124 92l-10-8M132 84l-2-13M140 92l11-6M122 102l-12 2" ${I} stroke-width="4.5"/></g>
+    <g class="art-glove"><circle cx="140" cy="110" r="17" fill="#4fb6ff" stroke="#fff" stroke-width="5"/><circle cx="140" cy="110" r="21" fill="none" ${I} stroke-width="3.5"/></g>
+  </svg>`,
+
+  mirror: `
+  <svg class="art art-mirror" viewBox="0 0 200 150" aria-hidden="true">
+    <g class="art-cat c1">
+      <path d="M50 102l-4 32M62 102l4 32" ${I} stroke-width="11"/>
+      <path d="M44 72h24l-3 32H47z" fill="#ff6fae" ${I} stroke-width="4"/>
+      <path d="M45 74L30 62L22 70M67 74L80 54L92 46" fill="none" ${I} stroke-width="11"/>
+      <path d="M45 74L30 62L22 70M67 74L80 54L92 46" fill="none" stroke="#ff6fae" stroke-width="5.5" stroke-linecap="round"/>
+      <path d="M44 46l3-14 9 9M68 46l-3-14-9 9" fill="#ff6fae" ${I} stroke-width="3.5"/>
+      <circle cx="56" cy="54" r="14" fill="#ff6fae" ${I} stroke-width="4"/>
+      <circle cx="51" cy="53" r="2.3" fill="#2a1636"/><circle cx="61" cy="53" r="2.3" fill="#2a1636"/><path d="M53 59l3 2 3-2" fill="none" ${I} stroke-width="2.5"/>
+    </g>
+    <g class="art-cat c2">
+      <path d="M138 102l-4 32M150 102l4 32" ${I} stroke-width="11"/>
+      <path d="M132 72h24l-3 32h-18z" fill="#fff" ${I} stroke-width="4" stroke-dasharray="7 6"/>
+      <path d="M133 74L118 62L110 70M155 74L168 54L180 46" fill="none" ${I} stroke-width="11"/>
+      <path d="M133 74L118 62L110 70M155 74L168 54L180 46" fill="none" stroke="#4fb6ff" stroke-width="5.5" stroke-linecap="round"/>
+      <path d="M132 46l3-14 9 9M156 46l-3-14-9 9" fill="#4fb6ff" ${I} stroke-width="3.5"/>
+      <circle cx="144" cy="54" r="14" fill="#4fb6ff" ${I} stroke-width="4"/>
+      <circle cx="139" cy="53" r="2.3" fill="#2a1636"/><circle cx="149" cy="53" r="2.3" fill="#2a1636"/><path d="M141 59l3 2 3-2" fill="none" ${I} stroke-width="2.5"/>
+    </g>
+    <path class="art-eq" d="M92 92h16M92 102h16" ${I} stroke-width="5"/>
+  </svg>`,
+
+  faces: `
+  <svg class="art art-faces" viewBox="0 0 200 150" aria-hidden="true">
+    <g class="art-pol">
+      <rect x="52" y="14" width="96" height="118" rx="8" fill="#fff" ${I}/>
+      <rect x="62" y="24" width="76" height="76" rx="4" fill="#ffe7b0" stroke="#2a1636" stroke-width="2.5"/>
+      <g class="art-face-in">
+        <circle cx="100" cy="64" r="28" fill="#ffd23f" ${I} stroke-width="4"/>
+        <ellipse cx="90" cy="58" rx="5" ry="6.5" fill="#fff" ${I} stroke-width="2.6"/><circle cx="90" cy="60" r="2.6" fill="#2a1636"/>
+        <path d="M104 59q6-6 12 0" fill="none" ${I} stroke-width="3"/>
+        <path d="M97 72q5 2 0 4.5q5 2 0 4.5" fill="none" ${I} stroke-width="3"/>
+        <ellipse cx="84" cy="70" rx="4.5" ry="3" fill="#ff8fab"/><ellipse cx="116" cy="70" rx="4.5" ry="3" fill="#ff8fab"/>
+      </g>
+      <text x="100" y="122" text-anchor="middle" font-family="Caveat, cursive" font-weight="700" font-size="19" fill="#2a1636">öpücük!</text>
+    </g>
+    <g class="art-flash"><path d="M168 30l5 11 12 2-9 8 3 12-11-6-11 6 3-12-9-8 12-2z" fill="#ffcd3c" ${I} stroke-width="3"/></g>
+    <path class="art-heart-f" d="M36 56c-4-7-14-4-12 3 1 6 12 12 12 12s11-6 12-12c2-7-8-10-12-3z" fill="#ff5fa2" ${I} stroke-width="3"/>
+  </svg>`,
+
+  nolaugh: `
+  <svg class="art art-nolaugh" viewBox="0 0 200 150" aria-hidden="true">
+    <g class="art-stone">
+      <circle cx="84" cy="66" r="44" fill="#ffd23f" ${I}/>
+      <path d="M62 54h14M92 54h14" ${I} stroke-width="4.5"/>
+      <circle cx="69" cy="62" r="3.6" fill="#2a1636"/><circle cx="99" cy="62" r="3.6" fill="#2a1636"/>
+      <path d="M70 86q14 4 28 0" fill="none" ${I} stroke-width="4.5"/>
+      <path d="M118 44c-4 7-5 11 0 13 5 1 7-4 3-10z" fill="#9fdcff" ${I} stroke-width="2.5"/>
+    </g>
+    <g class="art-feather">
+      <path d="M150 40c18 6 26 30 14 52-14-2-26-24-14-52z" fill="#fff" ${I} stroke-width="3.5"/>
+      <path d="M150 40c4 18 8 36 14 52M158 92l-6 18" fill="none" ${I} stroke-width="3"/>
+    </g>
+    <rect x="44" y="122" width="84" height="14" rx="7" fill="#fff" ${I} stroke-width="3.5"/>
+    <rect class="art-meter" x="46" y="124" width="62" height="10" rx="5" fill="#ff4f62"/>
+  </svg>`,
+
+  stare: `
+  <svg class="art art-stare" viewBox="0 0 200 150" aria-hidden="true">
+    <g class="art-eye e1">
+      <circle cx="64" cy="74" r="34" fill="#fff" ${I}/>
+      <path d="M44 64l6 4M42 82l7-2M82 92l-5-5" stroke="#ff6f7f" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="72" cy="76" r="14" fill="#4b6bff" ${I} stroke-width="3.5"/><circle cx="74" cy="76" r="6.5" fill="#2a1636"/><circle cx="69" cy="71" r="3" fill="#fff"/>
+      <path class="art-lid" d="M30 74a34 34 0 0 1 68 0z" fill="#ffd2a8" ${I} stroke-width="4"/>
+      <path d="M32 30l40 10" ${I} stroke-width="6"/>
+    </g>
+    <g class="art-eye e2">
+      <circle cx="136" cy="74" r="34" fill="#fff" ${I}/>
+      <path d="M156 64l-6 4M158 82l-7-2M118 92l5-5" stroke="#ff6f7f" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="128" cy="76" r="14" fill="#ff6fae" ${I} stroke-width="3.5"/><circle cx="126" cy="76" r="6.5" fill="#2a1636"/><circle cx="123" cy="71" r="3" fill="#fff"/>
+      <path class="art-lid" d="M102 74a34 34 0 0 1 68 0z" fill="#ffd2a8" ${I} stroke-width="4"/>
+      <path d="M168 30l-40 10" ${I} stroke-width="6"/>
+    </g>
+    <path class="art-zap" d="M100 112l-8 12h10l-6 14" fill="none" stroke="#ffcd3c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`,
+
   chipmunk: `
   <svg class="art art-chip" viewBox="0 0 200 150" aria-hidden="true">
     <g class="art-chip-face">

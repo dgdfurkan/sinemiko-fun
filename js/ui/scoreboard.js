@@ -72,8 +72,8 @@ export const scoreboard = {
     target.textContent = text;
     bump(target.closest('.sb-p'));
   },
-  // Puanı ekler; from verilirse "+3" rozeti o noktadan tabelaya uçar
-  add(i, pts, from) {
+  // Puanı ekler; from verilirse "+3" rozeti o noktadan tabelaya uçar. quiet: sık puanlarda zil çalmaz
+  add(i, pts, from, { quiet = false } = {}) {
     if (!root || !pts) return Promise.resolve();
     if (i === 'team') team += pts;
     else scores[i] += pts;
@@ -83,7 +83,7 @@ export const scoreboard = {
       if (!target) return;
       target.textContent = String(i === 'team' ? team : scores[i]);
       bump(pill);
-      sfx.ding();
+      if (!quiet) sfx.ding();
     };
     if (!from || !target) {
       finish();

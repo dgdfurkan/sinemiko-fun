@@ -6,6 +6,12 @@ Furkan ile Sinem'in oyun gecesi için hazırlanmış, tarayıcıda çalışan ç
 
 | Oyun | Nasıl Oynanır | Gerekenler |
 | --- | --- | --- |
+| Poz Ver! | Ekranda çıkan pozu ilk yapıp tutan kazanır. Sinemiko Diyor Ki modunda tuzak kartlar da gelir. | Kamera |
+| Baloncuk Avı | Aşağıdan yükselen baloncukları ellerinle patlatırsın. Altın +3, bomba -3. | Kamera |
+| Kopya Kedi | Biri garip bir poz uydurup donar, öbürü hayalet iskelete bakıp aynısını yapmaya çalışır. | Kamera |
+| Surat Yap | Kartta çıkan ifadeyi (şok, öpücük, göz kırpma...) ilk yapan kazanır. Sonunda Surat Albümü indirilebilir. | Kamera |
+| Gülme Yasak | Biri taş surat olur, öbürü güldürmeye çalışır. Kamera gülümsemeyi yakalar. | Kamera |
+| Bakışma Düellosu | İlk göz kırpan kaybeder. İstenirse gülmek de yasak. | Kamera |
 | Reverse Play | Biri kelimeyi söyler, kayıt ters çevrilir. Diğeri ters kaydı taklit eder, taklit tekrar ters çevrilir ve kelime tahmin edilir. | Mikrofon |
 | Fısıltı Challenge | Kulaklıkta yüksek müzik çalar, cümle dudaklardan okunur. | Kulaklık |
 | Kim Daha? | Soru çıkar, üçe kadar sayılır, ikiniz de aynı anda birini gösterirsiniz. | |
@@ -34,7 +40,7 @@ Furkan ile Sinem'in oyun gecesi için hazırlanmış, tarayıcıda çalışan ç
 
 ## Yerelde Çalıştırma
 
-Derleme adımı yok. Mikrofon yalnızca güvenli bağlantıda açıldığı için dosyayı doğrudan açmak yerine yerel bir sunucu kullan:
+Derleme adımı yok. Mikrofon ve kamera yalnızca güvenli bağlantıda açıldığı için dosyayı doğrudan açmak yerine yerel bir sunucu kullan:
 
 ```bash
 python3 -m http.server 5177
@@ -46,5 +52,7 @@ Sonra tarayıcıda `http://localhost:5177` adresini aç.
 
 - Müzik ve ses efektleri Web Audio ile anında üretilir, ses dosyası yoktur.
 - Kayıtlar yalnızca tarayıcıda kalır, hiçbir sunucuya gönderilmez. Reverse Play'de turu WAV olarak indirebilirsin.
+- Kamera oyunları yüz ve vücut takibi için MediaPipe kullanır. Model ilk açılışta indirilir, görüntü tarayıcıda işlenir ve hiçbir yere gönderilmez. Kamera yalnızca oyun ekranı açıkken çalışır.
+- Kamera oyunlarında oyuncular solda ve sağda durarak ayırt edilir. Türkçe ses yüklüyse komutlar yüksek sesle de okunur.
 - Mikrofon yalnızca kayıt sırasında açık kalır. Bluetooth kulaklıklar böylece kayıt dinlerken kaliteli moda döner.
 - İsimler, ses ayarları ve patlatılan baloncuk sayısı tarayıcıda saklanır.
