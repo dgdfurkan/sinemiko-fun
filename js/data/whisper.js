@@ -1,0 +1,25 @@
+// Fısıltı Challenge cümleleri. {0} ve {1} oyuncu isimleriyle değişir.
+
+export const PHRASES = [
+  'Kedim pazartesileri yoga yapıyor', 'Buzdolabında bir penguen var', 'Patates kızartması ruhun gıdasıdır',
+  'Komşunun tavuğu bana göz kırptı', 'Pijamamla düğüne gittim', 'Uzaylılar simit sever', 'Babaannem rap yapıyor',
+  'Çorabımın teki kayıp', 'Bu akşam mantı yiyelim mi', 'Kanepenin altında dinozor var', 'Şemsiyemi ördeğe verdim',
+  'Balkonda salsa dansı yaptık', 'Ayakkabılarım bana küstü', 'Kahvaltıda pasta yenir mi', 'Kirpiler sarılmayı sever',
+  'Tavuk karşıdan karşıya geçti', 'Saçlarım elektriklendi', 'Bulutlar pamuk şekerden yapılmış', 'Kumandayı köpek yemiş',
+  'Gece yarısı dondurma çok güzel olur', 'Penguenler kravat takar', 'Benim adım Süper Patates', "Ay'a pikniğe gidelim",
+  'Hamsiler denizde halay çekiyor', 'Kurabiyeleri kim yedi', 'Zürafanın boynu ağrıyor', 'Fasulye tanesi şarkı söylüyor',
+  'Pazardan iki kilo mutluluk aldım', 'Kedi klavyede uyuyakaldı', 'Çaydanlık ıslık çalıyor', 'Robot süpürge evden kaçtı',
+  'Hamster tekerlekte maraton koşuyor', 'Limonata içen bir dinozor', 'Çiçeklerime şarkı söylüyorum',
+  'Lahmacuna limon sıkmayı unutma', 'Bulaşık makinesi dans ediyor', 'Ördekler sabah kahvesi içer',
+  'Saksıdaki kaktüs bana sarıldı', 'Ninja kaplumbağalar pizza istedi', 'Gökkuşağına tırmanmak istiyorum',
+  'Tembel hayvan koşu bandında', 'Peynirli tost en güzel aşk mektubudur', 'Uçan halı trafiğe takıldı',
+  'Fil ile fare satranç oynuyor', 'Kar tanesi güneşlenmeye çıktı', 'Telefonumun şarjı yüzde bir',
+  'Gözlüğüm kafamın üstündeymiş', 'Bisikletle Ankara’ya gidiyorum', 'Islak hamburger gece yarısı yenir',
+  'Kediler aslında dünyayı yönetiyor', 'Sakız ayakkabıma yapıştı', 'Turşu suyu her derde deva', 'Benim balığım konuşuyor',
+  'Rüyamda ünlü bir şef oldum', 'Asansörde şarkı söyledim', 'Kahve olmadan konuşamam', 'Hafta sonu sinemaya gidelim',
+  'Ellerimi ısıt lütfen', 'Bana bir sürpriz hazırla', 'Patlıcan kızartması yapalım', 'Dişçiye gitmekten korkuyorum',
+  'Yüzme havuzunda jöle var', 'Karpuz kabuğundan gemi yaptım', 'Sınavdan yüz aldım', 'Ayıcık şeklinde kurabiye yaptım',
+  'Uykumda halay çekiyormuşum', 'Mikrodalga fırın bana bağırdı', 'Sabah sporu yapmaya başladım', 'Bugün hiç bulaşık yok',
+  '{1} bugün çok güzel', '{0} bulaşıkları yıkayacak', '{1} en iyi dansçıdır', '{0} yine pizza istiyor',
+  '{1} benim prensesim', '{0} horlamaz, sadece mırlar', '{1} kahvemi hazırlayacak', '{0} çok yakışıklı olmuş',
+];

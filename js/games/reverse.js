@@ -1,0 +1,739 @@
+// Reverse Play: söyle, ters çevir, taklit et, tersin tersinden kelimeyi bul
+
+import { html, toHTML, Life, shuffle, pick } from '../lib/dom.js';
+import { nameOf } from '../lib/store.js';
+import { judgeGuess, dative, fmtSec } from '../lib/text.js';
+import { Stage } from '../ui/stage.js';
+import { avatar, setBlob, react } from '../ui/avatar.js';
+import { icon } from '../ui/icons.js';
+import { scoreboard } from '../ui/scoreboard.js';
+import { segHTML, bindSeg, stepperHTML, bindStepper, chipsHTML, bindChips } from '../ui/controls.js';
+import { Waveform } from '../ui/waveform.js';
+import { countdown } from '../ui/countdown.js';
+import { openSheet, toast } from '../ui/overlay.js';
+import { VoiceRecorder, cleanClip, micErrorText } from '../audio/recorder.js';
+import { makeBuffer, reverseBuffer, playClip, stopClip, isPlaying, downloadClips } from '../audio/clip.js';
+import { music } from '../audio/music.js';
+import { sfx } from '../audio/sfx.js';
+import { burst } from '../fx/confetti.js';
+import { CATEGORIES, DEFAULT_CATS } from '../data/reverse-words.js';
+import {
+  lobbyHTML, optHTML, FIRST_OPTIONS, coinFlip, celebrate, versusFinaleHTML, finaleButtons,
+  other, pSpan, flipEl, popIn, bumpEl, shakeEl,
+} from './common.js';
+
+const MAX_SEC = 10;
+const POINTS = { full: 3, close: 1, miss: 0 };
+const HEADLINES = {
+  full: ['Kulak Dediğin Böyle Olur!', 'Tam İsabet!', 'Resmen Çözdün!'],
+  close: ['Az Kalsın!', 'Çok Yaklaştın!', 'Neredeyse!'],
+  miss: ['Olmadı Ama Çok Komikti', 'Bu Neydi Şimdi?', 'Kulaklar Biraz Karıştı'],
+};
+
+export function mount(view, { game, navigate }) {
+  const life = new Life();
+  view.innerHTML = '<section class="screen game game-reverse"><div class="stage"></div></section>';
+  const stage = new Stage(view.querySelector('.stage'), life);
+  const rec = new VoiceRecorder();
+  life.add(() => {
+    rec.close();
+    stopClip();
+    music.duck('reverse', false);
+    scoreboard.hide();
+  });
+
+  const cfg = { rounds: 6, cats: new Set(DEFAULT_CATS), first: 'random' };
+  let g = null;
+  let starting = false;
+
+  /* ---------- Klip kartı ---------- */
+
+  const clipCardHTML = (id, title, buffer, cls = '') => html`
+    <div class="clip-card card ${cls}" data-clip="${id}" data-in>
+      <button class="clip-play" data-act="play-${id}" data-silent aria-label="Dinle">${icon('play', 'i-play')}${icon('stop', 'i-stop')}</button>
+      <div class="clip-body"><span class="clip-title">${title}</span><canvas class="clip-wave"></canvas></div>
+      <span class="clip-dur">${fmtSec(buffer.duration)}</span>
+    </div>`;
+
+  function wireClip(scene, id, buffer) {
+    const card = scene.querySelector(`[data-clip="${id}"]`);
+    const wf = new Waveform(card.querySelector('canvas'), { bars: 64 });
+    wf.setBuffer(buffer);
+    stage.own(() => wf.destroy());
+    const ctl = {
+      card,
+      buffer,
+      handle: null,
+      play(force = false) {
+        if (!force && card.classList.contains('playing')) {
+          stopClip();
+          return;
+        }
+        card.classList.add('playing');
+        const h = playClip(ctl.buffer, {
+          onProgress: (p) => { if (ctl.handle === h) wf.setProgress(p); },
+          onEnd: () => {
+            if (ctl.handle !== h) return;
+            ctl.handle = null;
+            card.classList.remove('playing');
+            wf.setProgress(0);
+          },
+        });
+        ctl.handle = h;
+      },
+      setBuffer(b, title) {
+        ctl.buffer = b;
+        wf.setBuffer(b);
+        card.querySelector('.clip-title').textContent = title;
+        card.querySelector('.clip-dur').textContent = fmtSec(b.duration);
+      },
+    };
+    return ctl;
+  }
+
+  // Küçük oynatıcı düğmeleri: aynı anda tek klip çalar
+  function miniPlayer(scene) {
+    let current = null;
+    const reset = (el) => {
+      el.classList.remove('playing');
+      el.style.setProperty('--p', '0');
+    };
+    return (el, buffer) => {
+      const wasPlaying = el.classList.contains('playing');
+      scene.querySelectorAll('.mini-clip.playing').forEach(reset);
+      if (wasPlaying) {
+        current = null;
+        stopClip();
+        return;
+      }
+      el.classList.add('playing');
+      const h = playClip(buffer, {
+        onProgress: (p) => { if (current === h) el.style.setProperty('--p', p.toFixed(3)); },
+        onEnd: () => { if (current === h) { current = null; reset(el); } },
+      });
+      current = h;
+    };
+  }
+
+  // İzin penceresi açık kalırsa kullanıcıya nereye bakacağını söyle
+  async function openMic() {
+    const hint = setTimeout(() => toast('Tarayıcı mikrofon izni soruyor. Adres çubuğunun yanındaki pencereden izin ver.', { tone: 'pink', ms: 5000 }), 1200);
+    try {
+      await rec.open();
+    } finally {
+      clearTimeout(hint);
+    }
+  }
+
+  function micError(err) {
+    openSheet(html`
+      <div class="sheet-ic">${icon('mic')}</div>
+      <h2 class="t-big t-accent">Mikrofon Açılamadı</h2>
+      <p class="t-lead">${micErrorText(err)}</p>
+      <button class="btn btn--primary" data-act="ok" data-primary>Tamam</button>`, {
+      actions: { ok: (t, e, close) => close() },
+    });
+  }
+
+  /* ---------- Lobi ---------- */
+
+  function lobby() {
+    g = null;
+    music.duck('reverse', false);
+    scoreboard.hide();
+    const scene = stage.show(lobbyHTML({
+      game,
+      rules: [
+        'Söyleyen, kartta çıkan şeyi mikrofona söyler. Diğeri o sırada kulaklarını kapatır.',
+        'Oyun kaydı tersine çevirir.',
+        'Tahminci ters kaydı dinler ve duyduğunu aynen taklit eder.',
+        'Taklit tekrar ters çevrilir. Ortaya çıkan sesten kelimeyi bulan puanı alır.',
+      ],
+      options: html`
+        ${optHTML('Tur Sayısı', stepperHTML('rounds', cfg.rounds), 'Roller her turda değişir.')}
+        ${optHTML('Kategoriler', chipsHTML('cats', CATEGORIES.map((c) => [c.id, c.name]), cfg.cats))}
+        ${optHTML('İlk Söyleyen', segHTML('first', FIRST_OPTIONS(), cfg.first))}`,
+      start: 'Mikrofonu Aç ve Başla',
+      startIcon: 'mic',
+      note: 'Tarayıcı mikrofon izni isteyecek. Kayıtlar yalnızca bu cihazda kalır.',
+    }), { start: () => startGame() }, { className: 'has-lobby' });
+    bindStepper(scene.querySelector('[data-stepper="rounds"]'), { value: cfg.rounds, min: 2, max: 20, step: 2, onChange: (v) => { cfg.rounds = v; } });
+    bindChips(scene.querySelector('[data-chips="cats"]'), { values: cfg.cats, onChange: (s) => { cfg.cats = s; } });
+    const seg = bindSeg(scene.querySelector('[data-seg="first"]'), { value: cfg.first, onChange: (v) => { cfg.first = v; } });
+    stage.own(() => seg.destroy());
+  }
+
+  async function startGame() {
+    if (starting) return;
+    starting = true;
+    const btn = stage.scene.querySelector('[data-act="start"], [data-act="again"]');
+    if (btn) btn.disabled = true;
+    try {
+      await openMic();
+    } catch (err) {
+      starting = false;
+      if (!life.alive) return;
+      if (btn) btn.disabled = false;
+      micError(err);
+      return;
+    }
+    starting = false;
+    if (!life.alive) {
+      rec.close();
+      return;
+    }
+    g = { round: 0, total: cfg.rounds, first: 0, deck: buildDeck(), archive: [], over: false, cur: null };
+    scoreboard.show({ mode: 'versus', mid: `Tur 1 / ${g.total}` });
+    g.first = cfg.first === 'random' ? await coinFlip(stage, life, { title: 'İlk Kim Söylüyor?' }) : Number(cfg.first);
+    newRound();
+  }
+
+  function buildDeck() {
+    const cats = CATEGORIES.filter((c) => cfg.cats.has(c.id));
+    const cards = cats.flatMap((c) => c.items.map((it) => (Array.isArray(it) ? { text: it[0], hint: it[1], cat: c.name } : { text: it, hint: '', cat: c.name })));
+    return shuffle(cards);
+  }
+
+  function drawCard() {
+    if (!g.deck.length) g.deck = buildDeck();
+    return g.deck.pop();
+  }
+
+  /* ---------- Tur akışı ---------- */
+
+  function newRound() {
+    const speaker = (g.first + g.round) % 2;
+    g.cur = { speaker, guesser: other(speaker), word: drawCard(), a: null, aRev: null, b: null, bRev: null, listens: 0, guess: '', judged: false };
+    scoreboard.setMid(`Tur ${g.round + 1} / ${g.total}`);
+    scoreboard.setActive(speaker);
+    turnIntro();
+  }
+
+  function turnIntro() {
+    music.duck('reverse', false);
+    const { speaker: s, guesser: q } = g.cur;
+    const slot = (i) => (i === s
+      ? html`<div class="duo-slot">${avatar(i, { pose: 'mic', props: 'mic', mood: 'smirk' })}<span class="role-chip p${i}">Söylüyor</span></div>`
+      : html`<div class="duo-slot">${avatar(i, { pose: 'ears', eyes: 'shut', mood: 'flat' })}<span class="role-chip p${i}">Duymuyor</span></div>`);
+    stage.show(html`
+      <div class="duo-stage" data-in>${slot(0)}${slot(1)}</div>
+      <h2 class="t-title" data-in>${pSpan(s)} Söylüyor</h2>
+      <p class="t-lead" data-in>${nameOf(q)}, kulaklarını kapat ve ekrana bakma. Hazır olunca ${nameOf(s)} devam etsin.</p>
+      <button class="btn btn--primary btn--big nudge" data-act="next" data-primary data-once>${icon('arrow')}Kulaklar Kapalı, Devam</button>`, {
+      next: () => pickWord(),
+    });
+  }
+
+  const cardInner = (w) => html`<span class="wc-cat">${w.cat}</span><span class="wc-word">${w.text}</span>${w.hint ? html`<span class="wc-hint">${w.hint}</span>` : ''}`;
+  const cardButtons = () => html`
+    <button class="btn" data-act="shuffle">${icon('shuffle')}Başka Kart</button>
+    <button class="btn" data-act="custom">${icon('pencil')}Kendim Yazacağım</button>
+    <button class="btn btn--primary nudge" data-act="go" data-primary>${icon('mic')}Bununla Kaydet</button>`;
+  const customButtons = () => html`
+    <button class="btn" data-act="back">${icon('back')}Kartlara Dön</button>
+    <button class="btn btn--primary nudge" data-act="go" data-primary>${icon('mic')}Bununla Kaydet</button>`;
+
+  function pickWord() {
+    const c = g.cur;
+    let mode = 'card';
+    let flipping = false;
+    let dirty = false;
+    const customInner = () => html`<span class="wc-cat">Kendi Kelimen</span><input class="field wc-input" maxlength="40" placeholder="Ne söyleyeceksin?" aria-label="Gizli kelime" autocomplete="off">`;
+    const render = () => {
+      card.innerHTML = toHTML(mode === 'custom' ? customInner() : cardInner(c.word));
+      const input = card.querySelector('input');
+      if (input) input.focus();
+    };
+    const setMode = (m) => {
+      mode = m;
+      row.innerHTML = toHTML(m === 'custom' ? customButtons() : cardButtons());
+      popIn(row.children);
+      swapCard();
+    };
+    const scene = stage.show(html`
+      <p class="t-hand" data-in>${nameOf(c.speaker)}, gizli kelimen bu</p>
+      <div class="word-wrap" data-in><div class="word-card card">${cardInner(c.word)}</div></div>
+      <div class="row" data-in data-row>${cardButtons()}</div>`, {
+      shuffle: () => {
+        c.word = drawCard();
+        swapCard();
+      },
+      custom: () => setMode('custom'),
+      back: () => setMode('card'),
+      go: () => {
+        if (mode === 'custom') {
+          const input = card.querySelector('input');
+          const v = input ? input.value.replace(/\s+/g, ' ').trim() : '';
+          if (!v) {
+            if (input) {
+              shakeEl(input);
+              input.focus();
+            }
+            sfx.boing();
+            return;
+          }
+          c.word = { text: v, hint: '', cat: 'Kendi Kelimen' };
+        }
+        recordA();
+      },
+    });
+    const card = scene.querySelector('.word-card');
+    const row = scene.querySelector('[data-row]');
+    // Arka arkaya basılırsa son durum en sonda yeniden çizilir
+    async function swapCard() {
+      if (flipping) {
+        dirty = true;
+        return;
+      }
+      flipping = true;
+      await flipEl(card, render);
+      flipping = false;
+      if (dirty && stage.scene === scene) {
+        dirty = false;
+        swapCard();
+      }
+    }
+  }
+
+  /* ---------- Kayıt sahnesi ---------- */
+
+  function recordScene({ who, heading, extra = '', actions = {}, onDone }) {
+    music.duck('reverse', true);
+    stopClip();
+    let state = 'idle';
+    let startAt = 0;
+    let stopLoop = null;
+    const levels = new Array(48).fill(0.03);
+    const scene = stage.show(html`
+      <h2 class="t-big" data-in>${heading}</h2>
+      ${extra}
+      <div class="mic-wrap p${who}" data-in>
+        <span class="mic-halo"></span>
+        <button class="mic" data-act="mic" data-silent aria-label="Kayda başla">
+          ${icon('mic', 'i-mic')}${icon('stop', 'i-stop')}
+          <span class="mic-label">Kayda Başla</span>
+        </button>
+      </div>
+      <div class="rec-meter" data-in><span class="rec-dot"></span><canvas class="live-wave"></canvas><span class="rec-time">0,0 sn</span></div>
+      <p class="key-hint" data-in><span class="key">Boşluk</span> tuşuyla da başlatıp bitirebilirsin</p>`,
+    { ...actions, mic: () => toggle() },
+    {
+      onKey: (e, typing) => {
+        if (e.code !== 'Space' || typing) return false;
+        e.preventDefault();
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+        if (!e.repeat) toggle();
+        return true;
+      },
+    });
+    const wrap = scene.querySelector('.mic-wrap');
+    const label = scene.querySelector('.mic-label');
+    const time = scene.querySelector('.rec-time');
+    const wf = new Waveform(scene.querySelector('.live-wave'), { bars: 48 });
+    wf.setValues(levels);
+    wf.setProgress(1);
+    stage.own(() => {
+      wf.destroy();
+      if (stopLoop) stopLoop();
+      if (state === 'rec') rec.stop();
+    });
+    const lock = (on) => scene.querySelectorAll('[data-lock-rec]').forEach((b) => { b.disabled = on; });
+
+    async function toggle() {
+      if (state === 'idle') {
+        state = 'opening';
+        if (!rec.ready) {
+          try {
+            await openMic();
+          } catch (err) {
+            state = 'idle';
+            if (life.alive) micError(err);
+            return;
+          }
+          if (!life.alive) {
+            rec.close();
+            return;
+          }
+        }
+        if (stage.scene !== scene) return;
+        stopClip();
+        rec.start();
+        state = 'rec';
+        startAt = performance.now();
+        scene.classList.add('is-rec');
+        label.textContent = 'Bitir';
+        lock(true);
+        sfx.soft();
+        stopLoop = life.raf(() => {
+          const lv = rec.level();
+          wrap.style.setProperty('--lvl', Math.min(1, lv * 6).toFixed(3));
+          levels.push(Math.min(1, lv * 7 + 0.03));
+          levels.shift();
+          wf.setValues(levels);
+          const sec = (performance.now() - startAt) / 1000;
+          time.textContent = `${fmtSec(Math.min(sec, MAX_SEC))} / ${MAX_SEC} sn`;
+          if (sec >= MAX_SEC) {
+            toggle();
+            return false;
+          }
+          return true;
+        });
+      } else if (state === 'rec') {
+        state = 'busy';
+        if (stopLoop) {
+          stopLoop();
+          stopLoop = null;
+        }
+        scene.classList.remove('is-rec');
+        scene.classList.add('is-busy');
+        label.textContent = 'Hazırlanıyor';
+        wrap.style.setProperty('--lvl', '0');
+        const raw = await rec.stop();
+        if (!life.alive || stage.scene !== scene) return;
+        const clean = cleanClip(raw, rec.sampleRate);
+        if (!clean) {
+          state = 'idle';
+          scene.classList.remove('is-busy');
+          label.textContent = 'Kayda Başla';
+          time.textContent = '0,0 sn';
+          lock(false);
+          sfx.boing();
+          toast('Ses duyamadım. Mikrofona biraz daha yakın konuşup tekrar dene.', { tone: 'warn' });
+          return;
+        }
+        onDone(makeBuffer(clean, rec.sampleRate));
+      }
+    }
+  }
+
+  function recordA() {
+    const c = g.cur;
+    recordScene({
+      who: c.speaker,
+      heading: 'Şimdi Net Bir Sesle Söyle',
+      extra: html`<div class="say-chip" data-in>${c.word.text}</div>`,
+      onDone: (buf) => {
+        c.a = buf;
+        c.aRev = null;
+        reviewA();
+      },
+    });
+  }
+
+  function reviewA() {
+    const c = g.cur;
+    let busy = false;
+    const scene = stage.show(html`
+      <h2 class="t-big" data-in>Kaydın Hazır</h2>
+      ${clipCardHTML('a', 'Senin Sesin', c.a, 'big')}
+      <div class="row" data-in data-row>
+        <button class="btn" data-act="redo">${icon('replay')}Tekrar Kaydet</button>
+        <button class="btn btn--primary nudge" data-act="flip" data-primary>${icon('rewind')}Ters Çevir</button>
+      </div>
+      <p class="t-hand" data-in>${nameOf(c.guesser)} hâlâ duymuyor, değil mi?</p>`, {
+      'play-a': () => clip.play(),
+      redo: () => { if (!busy) recordA(); },
+      flip: async () => {
+        if (busy) return;
+        busy = true;
+        scene.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+        stopClip();
+        c.aRev = reverseBuffer(c.a);
+        await flipEl(clip.card, () => clip.setBuffer(c.aRev, 'Ters Hali'), { sound: 'rewind' });
+        if (stage.scene !== scene) return;
+        scene.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+        row.innerHTML = toHTML(html`
+          <button class="btn" data-act="play-a" data-silent>${icon('play')}Ters Halini Dinle</button>
+          <button class="btn btn--primary nudge" data-act="handoff" data-primary data-once>${dative(nameOf(c.guesser))} Geç${icon('arrow')}</button>`);
+        popIn(row.children);
+      },
+      handoff: () => handoff(),
+    });
+    const clip = wireClip(scene, 'a', c.a);
+    const row = scene.querySelector('[data-row]');
+  }
+
+  function handoff() {
+    stopClip();
+    const c = g.cur;
+    music.duck('reverse', false);
+    scoreboard.setActive(c.guesser);
+    const scene = stage.show(html`
+      <div class="big-blob" data-in>${avatar(c.guesser, { pose: 'ears', eyes: 'shut', mood: 'flat' })}</div>
+      <h2 class="t-title" data-in>${pSpan(c.guesser)}, Kulaklarını Aç!</h2>
+      <p class="t-lead" data-in>${nameOf(c.speaker)} sana ters bir kayıt bıraktı. Dikkatle dinle, sonra aynen taklit et.</p>
+      <button class="btn btn--primary btn--big nudge" data-act="ready" data-primary data-once>${icon('phones')}Hazırım</button>`, {
+      ready: async () => {
+        music.duck('reverse', true);
+        scene.classList.add('counting');
+        await countdown(scene, life, { final: 'Dinle!' });
+        if (stage.scene === scene) listen();
+      },
+    });
+    const blob = scene.querySelector('.blob');
+    life.timeout(() => {
+      setBlob(blob, { pose: 'cheer', eyes: 'open', mood: 'wow' });
+      react(blob, 'jump');
+      sfx.boing();
+    }, 800);
+  }
+
+  function listen() {
+    const c = g.cur;
+    if (!c.aRev) c.aRev = reverseBuffer(c.a);
+    c.listens++;
+    const scene = stage.show(html`
+      <h2 class="t-big" data-in>Ters Kayıt</h2>
+      ${clipCardHTML('r', 'Ters Kayıt', c.aRev, 'big')}
+      <p class="listen-count" data-in><b data-count>${c.listens}</b>. dinleyiş</p>
+      <div class="row" data-in>
+        <button class="btn" data-act="replay" data-silent>${icon('replay')}Tekrar Dinle</button>
+        <button class="btn btn--primary nudge" data-act="next" data-primary data-once>${icon('mic')}Taklit Etmeye Hazırım</button>
+      </div>`, {
+      'play-r': () => hear(false),
+      replay: () => hear(true),
+      next: () => recordB(),
+    });
+    const clip = wireClip(scene, 'r', c.aRev);
+    const count = scene.querySelector('[data-count]');
+    function hear(force) {
+      const starting = force || !clip.card.classList.contains('playing');
+      if (starting) {
+        c.listens++;
+        count.textContent = String(c.listens);
+        bumpEl(count);
+      }
+      clip.play(force);
+    }
+    life.timeout(() => { if (stage.scene === scene) clip.play(true); }, 300);
+  }
+
+  function recordB() {
+    const c = g.cur;
+    recordScene({
+      who: c.guesser,
+      heading: 'Duyduğunu Aynen Taklit Et',
+      extra: html`<button class="btn btn--sm" data-act="hear" data-silent data-lock-rec data-in>${icon('play')}Ters Kaydı Tekrar Dinle</button>`,
+      actions: {
+        hear: () => {
+          if (isPlaying()) {
+            stopClip();
+            return;
+          }
+          c.listens++;
+          playClip(c.aRev);
+        },
+      },
+      onDone: (buf) => {
+        c.b = buf;
+        c.bRev = null;
+        reviewB();
+      },
+    });
+  }
+
+  function reviewB() {
+    const c = g.cur;
+    let busy = false;
+    const scene = stage.show(html`
+      <h2 class="t-big" data-in>Taklidin Hazır</h2>
+      ${clipCardHTML('b', 'Senin Taklidin', c.b, 'big')}
+      <div class="row" data-in>
+        <button class="btn" data-act="redo">${icon('replay')}Tekrar Kaydet</button>
+        <button class="btn btn--primary nudge" data-act="flip" data-primary>${icon('rewind')}Tersine Çevir</button>
+      </div>
+      <p class="t-hand" data-in>Şimdi sihirli an geliyor</p>`, {
+      'play-b': () => clip.play(),
+      redo: () => { if (!busy) recordB(); },
+      flip: async () => {
+        if (busy) return;
+        busy = true;
+        scene.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+        stopClip();
+        c.bRev = reverseBuffer(c.b);
+        await flipEl(clip.card, () => clip.setBuffer(c.bRev, 'Taklidinin Tersi'), { sound: 'rewind' });
+        if (stage.scene === scene) decode();
+      },
+    });
+    const clip = wireClip(scene, 'b', c.b);
+  }
+
+  function decode() {
+    const c = g.cur;
+    music.duck('reverse', true);
+    const scene = stage.show(html`
+      <h2 class="t-big" data-in>Bakalım Ne Çıktı?</h2>
+      ${clipCardHTML('d', 'Taklidinin Tersi', c.bRev, 'big decode')}
+      <div class="guess-box" data-in><input class="field" data-guess maxlength="60" placeholder="${nameOf(c.speaker)} ne dedi? Tahminini yaz" aria-label="Tahmin" autocomplete="off"></div>
+      <div class="row" data-in>
+        <button class="btn" data-act="replay" data-silent>${icon('replay')}Tekrar Dinle</button>
+        <button class="btn btn--primary nudge" data-act="guess" data-primary data-once>${icon('check')}Tahmin Et</button>
+      </div>
+      <p class="key-hint" data-in>Sesli söylediysen boş bırakıp geçebilirsin</p>`, {
+      'play-d': () => clip.play(),
+      replay: () => clip.play(true),
+      guess: () => {
+        c.guess = scene.querySelector('[data-guess]').value.replace(/\s+/g, ' ').trim();
+        reveal();
+      },
+    });
+    const clip = wireClip(scene, 'd', c.bRev);
+    life.timeout(() => {
+      if (stage.scene !== scene) return;
+      clip.play(true);
+      scene.querySelector('[data-guess]').focus({ preventScroll: true });
+    }, 450);
+  }
+
+  async function reveal() {
+    stopClip();
+    const c = g.cur;
+    const suggestion = c.guess ? judgeGuess(c.word.text, c.guess) : null;
+    const sug = (k) => (suggestion === k ? 'suggest' : '');
+    const scene = stage.show(html`
+      <p class="t-hand" data-in>Doğru cevap</p>
+      <div class="reveal-wrap" data-in>
+        <div class="reveal-card card">
+          <div class="rc-face rc-back">?</div>
+          <div class="rc-face rc-front"><span class="wc-cat">${c.word.cat}</span><span class="wc-word">${c.word.text}</span></div>
+        </div>
+      </div>
+      <p class="guess-line" data-in>${c.guess ? html`${nameOf(c.guesser)} tahmini: <b>${c.guess}</b>` : 'Tahmin sesli söylendi.'}</p>
+      <div class="verdict-box pending" data-verdict>
+        <p class="verdict-q">${nameOf(c.speaker)}, sence bildi mi?</p>
+        <div class="row">
+          <button class="btn btn--good ${sug('full')}" data-act="full">${icon('check')}Tam Bildi<span class="pts">+3</span></button>
+          <button class="btn btn--meh ${sug('close')}" data-act="close">Yaklaştı<span class="pts">+1</span></button>
+          <button class="btn btn--bad ${sug('miss')}" data-act="miss">${icon('x')}Bilemedi</button>
+        </div>
+        <button class="btn btn--sm" data-act="orig" data-silent>${icon('play')}Orijinal Kaydı Dinle</button>
+      </div>`, {
+      full: (t) => verdict('full', t),
+      close: (t) => verdict('close', t),
+      miss: (t) => verdict('miss', t),
+      orig: () => (isPlaying() ? stopClip() : playClip(c.a)),
+    });
+    const wrap = scene.querySelector('.reveal-wrap');
+    const card = scene.querySelector('.reveal-card');
+    await life.sleep(450);
+    if (stage.scene !== scene) return;
+    wrap.classList.add('shaking');
+    sfx.drumroll(1.3);
+    await life.sleep(1300);
+    if (stage.scene !== scene) return;
+    wrap.classList.remove('shaking');
+    card.classList.add('flipped');
+    sfx.flip();
+    const r = card.getBoundingClientRect();
+    burst(r.left + r.width / 2, r.top + r.height / 2, { count: 50, power: 12 });
+    await life.sleep(650);
+    if (stage.scene !== scene) return;
+    playClip(c.a);
+    scene.querySelector('[data-verdict]').classList.remove('pending');
+  }
+
+  function verdict(kind, btn) {
+    const c = g.cur;
+    if (c.judged) return;
+    c.judged = true;
+    stopClip();
+    const bonus = kind === 'full' && c.listens <= 1;
+    const pts = POINTS[kind] + (bonus ? 1 : 0);
+    c.verdict = kind;
+    c.pts = pts;
+    g.archive.push({ ...c, round: g.round + 1 });
+    const r = btn.getBoundingClientRect();
+    if (kind === 'full') {
+      sfx.success();
+      burst(r.left + r.width / 2, r.top, { count: 90, power: 16 });
+    } else if (kind === 'close') {
+      sfx.heart();
+      burst(r.left + r.width / 2, r.top, { count: 30, power: 9, shapes: ['heart', 'circle'] });
+    } else {
+      sfx.fail();
+    }
+    if (pts) scoreboard.add(c.guesser, pts, btn);
+    recap(bonus);
+  }
+
+  function recap(bonus) {
+    const c = g.cur;
+    const last = g.round + 1 >= g.total;
+    const mood = (i) => {
+      if (i === c.guesser) {
+        if (c.verdict === 'full') return { mood: 'laugh', eyes: 'happy', pose: 'cheer', props: 'heart' };
+        if (c.verdict === 'close') return { mood: 'smirk' };
+        return { mood: 'sad', props: 'sweat' };
+      }
+      return c.verdict === 'miss' ? { mood: 'laugh', eyes: 'happy' } : { mood: 'happy', pose: 'cheer' };
+    };
+    const line = c.verdict === 'miss'
+      ? 'Bu turda puan yok. Kayıtları dinleyip gülebilirsiniz.'
+      : `${nameOf(c.guesser)} ${c.pts} puan kazandı.${bonus ? ' İlk dinleyişte bildiği için bir bonus puan da var.' : ''}`;
+    const scene = stage.show(html`
+      <div class="duo-stage" data-in>${[0, 1].map((i) => html`<div class="duo-slot">${avatar(i, mood(i))}</div>`)}</div>
+      <h2 class="t-title" data-in>${pick(HEADLINES[c.verdict])}</h2>
+      <p class="t-lead" data-in>${line}</p>
+      <div class="mini-clips" data-in>
+        <button class="mini-clip" data-act="mc" data-k="a" data-silent><span class="mc-ic">${icon('play')}</span>Orijinal<span class="mc-bar"></span></button>
+        <button class="mini-clip" data-act="mc" data-k="aRev" data-silent><span class="mc-ic">${icon('rewind')}</span>Ters Hali<span class="mc-bar"></span></button>
+        <button class="mini-clip" data-act="mc" data-k="b" data-silent><span class="mc-ic">${icon('mic')}</span>Taklit<span class="mc-bar"></span></button>
+        <button class="mini-clip" data-act="mc" data-k="bRev" data-silent><span class="mc-ic">${icon('sparkle')}</span>Taklidin Tersi<span class="mc-bar"></span></button>
+      </div>
+      <div class="row" data-in>
+        <button class="btn" data-act="dl">${icon('download')}Bu Turu İndir</button>
+        <button class="btn btn--primary nudge" data-act="next" data-primary data-once>${last ? 'Sonuçları Gör' : 'Sonraki Tur'}${icon('arrow')}</button>
+      </div>`, {
+      mc: (t) => play(t, c[t.dataset.k]),
+      dl: () => downloadClips([c.a, c.aRev, c.b, c.bRev], `reverse-play-tur-${g.round + 1}.wav`),
+      next: () => {
+        stopClip();
+        g.round++;
+        if (g.round >= g.total) final();
+        else newRound();
+      },
+    });
+    const play = miniPlayer(scene);
+    music.duck('reverse', false);
+  }
+
+  function final() {
+    g.over = true;
+    scoreboard.setActive(-1);
+    const scores = scoreboard.scores;
+    const fin = versusFinaleHTML(scores, { lines: { tie: 'Berabere! Kulaklar Eşit' } });
+    const sub = fin.winner === -1
+      ? 'İkiniz de aynı derecede iyi dinliyorsunuz.'
+      : `Bu gecenin en iyi kulağı ${nameOf(fin.winner)}.`;
+    const scene = stage.show(html`
+      ${fin.html}
+      <p class="t-lead" data-in>${sub}</p>
+      <div class="archive card scroll" data-in>
+        ${g.archive.map((a, i) => html`
+          <div class="arc-row">
+            <span class="arc-n">${a.round}</span>
+            <span class="arc-main"><span class="arc-word">${a.word.text}</span><span class="arc-who">${nameOf(a.speaker)} söyledi, ${nameOf(a.guesser)} tahmin etti</span></span>
+            <span class="arc-pts">+${a.pts}</span>
+            <button class="mini-clip mini-clip--icon" data-act="pl" data-i="${i}" data-silent aria-label="Taklidin tersini dinle"><span class="mc-ic">${icon('play')}</span><span class="mc-bar"></span></button>
+            <button class="ibtn" data-act="dl" data-i="${i}" aria-label="Turu indir">${icon('download')}</button>
+          </div>`)}
+      </div>
+      ${finaleButtons()}`, {
+      pl: (t) => play(t, g.archive[Number(t.dataset.i)].bRev),
+      dl: (t) => {
+        const a = g.archive[Number(t.dataset.i)];
+        downloadClips([a.a, a.aRev, a.b, a.bRev], `reverse-play-tur-${a.round}.wav`);
+      },
+      home: () => navigate('#/'),
+      again: () => startGame(),
+    });
+    const play = miniPlayer(scene);
+    celebrate();
+  }
+
+  lobby();
+  return {
+    unmount: () => life.dispose(),
+    inProgress: () => !!g && !g.over,
+  };
+}
