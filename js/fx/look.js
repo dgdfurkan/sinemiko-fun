@@ -5,19 +5,38 @@ let py = window.innerHeight / 2;
 let queued = false;
 let idleTimer = 0;
 
+// Konumlar her karede ölçülmez: ölçüm sayfa düzenini zorlar, fare hareketinde kasma yapar.
+// Sahne değişince, pencere boyutu değişince ya da en geç saniyede bir yeniden ölçülür.
+let rects = [];
+let measuredAt = 0;
+let dirty = true;
+const last = new WeakMap();
+
+function measure() {
+  rects = [];
+  for (const b of document.querySelectorAll('.blob')) {
+    const r = b.getBoundingClientRect();
+    if (r.width) rects.push({ b, cx: r.left + r.width / 2, cy: r.top + r.height * 0.45 });
+  }
+  measuredAt = performance.now();
+  dirty = false;
+}
+
 function update() {
   queued = false;
-  const blobs = document.querySelectorAll('.blob');
-  for (const b of blobs) {
-    const r = b.getBoundingClientRect();
-    if (!r.width) continue;
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height * 0.45;
+  if (dirty || performance.now() - measuredAt > 1000) measure();
+  for (const { b, cx, cy } of rects) {
     const dx = px - cx;
     const dy = py - cy;
     const d = Math.max(140, Math.hypot(dx, dy));
-    b.style.setProperty('--lx', (dx / d).toFixed(3));
-    b.style.setProperty('--ly', (dy / d).toFixed(3));
+    const lx = Math.round((dx / d) * 50) / 50;
+    const ly = Math.round((dy / d) * 50) / 50;
+    const prev = last.get(b);
+    // Değer değişmediyse stil yazılmaz; gereksiz stil hesabı olmaz
+    if (prev && prev[0] === lx && prev[1] === ly) continue;
+    last.set(b, [lx, ly]);
+    b.style.setProperty('--lx', String(lx));
+    b.style.setProperty('--ly', String(ly));
   }
 }
 
@@ -43,8 +62,13 @@ export function initLook() {
     }, 6000);
   }, { passive: true });
   // Yeni sahne gelince, giriş animasyonu bitince bir kez güncelle; DOM'u sürekli izleme
+  const remeasure = () => {
+    dirty = true;
+    queue();
+  };
   window.addEventListener('sf:scene', () => {
-    setTimeout(queue, 60);
-    setTimeout(queue, 700);
+    setTimeout(remeasure, 60);
+    setTimeout(remeasure, 700);
   });
+  window.addEventListener('resize', remeasure, { passive: true });
 }

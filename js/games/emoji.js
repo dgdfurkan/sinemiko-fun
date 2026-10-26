@@ -11,6 +11,8 @@ import { countdown } from '../ui/countdown.js';
 import { sfx } from '../audio/sfx.js';
 import { burst } from '../fx/confetti.js';
 import { EMOJI_CATS } from '../data/emoji.js';
+import { songHelper } from './songhelp.js';
+import { songByTitle } from './songfind.js';
 import { lobbyHTML, optHTML, celebrate, versusFinaleHTML, finaleButtons, other } from './common.js';
 
 const BUZZ_KEYS = { KeyA: 0, KeyL: 1 };
@@ -27,6 +29,8 @@ export function mount(view, { game, navigate }) {
   const life = new Life();
   view.innerHTML = '<section class="screen game game-emoji"><div class="stage"></div></section>';
   const stage = new Stage(view.querySelector('.stage'), life);
+  // Şarkı bulmacası açılınca şarkının tam hali ve sözleri dinlenebilir
+  const helper = songHelper(view.querySelector('.game-emoji'), life);
   life.add(() => scoreboard.hide());
   const cfg = { count: 12, cats: new Set(['film', 'sarki', 'deyim']) };
   let g = null;
@@ -52,7 +56,7 @@ export function mount(view, { game, navigate }) {
   }
 
   function startGame() {
-    const pool = EMOJI_CATS.filter((c) => cfg.cats.has(c.id)).flatMap((c) => c.items.map(([e, a]) => ({ e, a, cat: c.name })));
+    const pool = EMOJI_CATS.filter((c) => cfg.cats.has(c.id)).flatMap((c) => c.items.map(([e, a]) => ({ e, a, cat: c.name, song: c.id === 'sarki' })));
     g = { deck: shuffle(pool).slice(0, Math.min(cfg.count, pool.length)), i: 0, over: false };
     scoreboard.show({ mode: 'versus', mid: `1 / ${g.deck.length}` });
     ready();
@@ -91,6 +95,7 @@ export function mount(view, { game, navigate }) {
   }
 
   function puzzle() {
+    helper.hide();
     const q = g.deck[g.i];
     const state = { phase: 'open', buzzer: -1, timer: 0 };
     scoreboard.setMid(`${g.i + 1} / ${g.deck.length}`);
@@ -185,6 +190,7 @@ export function mount(view, { game, navigate }) {
       hint.classList.add('on', 'answer');
       card.classList.add('answered');
       sfx.flip();
+      if (q.song) helper.show(songByTitle(q.a));
     }
 
     function showAnswer() {
@@ -223,6 +229,7 @@ export function mount(view, { game, navigate }) {
 
   function final() {
     g.over = true;
+    helper.hide();
     const fin = versusFinaleHTML(scoreboard.scores, { lines: { tie: 'Berabere! İki Emoji Ustası' } });
     const sub = fin.winner === -1 ? 'Emojileri ikiniz de aynı hızla çözüyorsunuz.' : `Emoji dilini en iyi ${nameOf(fin.winner)} konuşuyor.`;
     stage.show(html`

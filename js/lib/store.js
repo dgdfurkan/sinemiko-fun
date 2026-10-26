@@ -27,6 +27,8 @@ function load() {
     sfxVol: num(saved.sfxVol, 0.8),
     bubbles: bool(saved.bubbles, true),
     voiceOn: bool(saved.voiceOn, true),
+    lyricChunk: saved.lyricChunk === 2 ? 2 : 4,
+    geminiKey: typeof saved.geminiKey === 'string' ? saved.geminiKey.trim().slice(0, 200) : '',
     popped: num(saved.popped, 0, 0, 1e9),
     maskVol: num(saved.maskVol, 0.7),
     homeTab: typeof saved.homeTab === 'string' ? saved.homeTab : 'all',

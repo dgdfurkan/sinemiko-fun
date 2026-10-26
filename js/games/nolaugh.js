@@ -255,7 +255,7 @@ export function mount(view, { game, navigate }) {
       ${podium}
       ${album.length ? albumStripHTML(album.slice(-12)) : ''}
       <div class="row" data-in>
-        ${album.length ? html`<button class="btn" data-act="dl">${icon('download')}Gülme Albümü</button>` : ''}
+        ${album.length ? html`<button class="btn" data-act="dl">${icon('download')}8K Albüm İndir</button>` : ''}
         <button class="btn" data-act="home">${icon('home')}Oyunlara Dön</button>
         <button class="btn btn--primary nudge" data-act="again" data-primary>${icon('replay')}Tekrar Oyna</button>
       </div>`, {

@@ -1,6 +1,6 @@
 // Ana menü: logo, iki karakter ve oyun rafı
 
-import { html, toHTML, Life } from '../lib/dom.js';
+import { html, toHTML, Life, reducedMotion } from '../lib/dom.js';
 import { nameOf, store } from '../lib/store.js';
 import { avatar, setBlob, react } from '../ui/avatar.js';
 import { icon } from '../ui/icons.js';
@@ -98,6 +98,18 @@ export function mountHome(view, { navigate }) {
   const ro = new ResizeObserver(() => placeThumb(true));
   ro.observe(tabs);
   life.add(() => ro.disconnect());
+
+  // Vitrin: her iki saniyede bir iki kartın çizimi birkaç saniye oynar; hepsi aynı anda oynamaz
+  if (!reducedMotion()) {
+    life.interval(() => {
+      const cards = [...grid.querySelectorAll('.gcard:not(.play)')];
+      for (let k = 0; k < 2 && cards.length; k++) {
+        const c = cards.splice(Math.floor(Math.random() * cards.length), 1)[0];
+        c.classList.add('play');
+        life.timeout(() => c.classList.remove('play'), 4200);
+      }
+    }, 2100);
+  }
 
   let switching = false;
   async function setTab(next) {

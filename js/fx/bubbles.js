@@ -28,17 +28,29 @@ function spawn() {
   b.type = 'button';
   b.tabIndex = -1;
   b.setAttribute('aria-hidden', 'true');
-  b.style.cssText = `--x:calc(${x.toFixed(2)}vw - ${(size / 2).toFixed(0)}px);--size:${size.toFixed(0)}px;--dur:${rand(11, 19).toFixed(1)}s;--sway:${rand(1.8, 3.2).toFixed(2)}s;--drift:${rand(8, 26).toFixed(0)}px;--hue:${rand(0, 360).toFixed(0)}deg`;
-  b.innerHTML = '<span class="bubble-in"></span>';
-  b.addEventListener('animationend', (e) => {
-    if (e.target === b) b.remove();
-  });
+  b.style.cssText = `left:calc(${x.toFixed(2)}vw - ${(size / 2).toFixed(0)}px);bottom:${(-size * 1.3).toFixed(0)}px;width:${size.toFixed(0)}px;height:${size.toFixed(0)}px;--hue:${rand(0, 360).toFixed(0)}deg`;
+  b.innerHTML = '<span class="bubble-in"><span class="bubble-ring"></span></span>';
   layer.append(b);
+  // Kesin değerli Web Animations: ekran kartı yürütür, her karede stil hesabı olmaz.
+  // (Anahtar karelerde CSS değişkeni olunca animasyon ana iş parçacığına düşüyordu.)
+  const drift = rand(8, 26);
+  const rise = b.animate(
+    [{ transform: 'translate3d(0, 0, 0)' }, { transform: `translate3d(0, ${(-(window.innerHeight + size * 2.6)).toFixed(0)}px, 0)` }],
+    { duration: rand(11000, 19000), easing: 'linear', fill: 'forwards' },
+  );
+  rise.finished.then(() => b.remove(), () => {});
+  const inner = b.firstElementChild;
+  inner.animate(
+    [{ transform: `translateX(${-drift}px) scale(1, .96)` }, { transform: `translateX(${drift}px) scale(.96, 1)` }],
+    { duration: rand(1800, 3200), direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' },
+  );
+  if (!reducedMotion()) inner.firstElementChild.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }], { duration: 7000, iterations: Infinity });
 }
 
 function pop(b) {
   if (b.classList.contains('popping')) return;
   b.classList.add('popping');
+  b.getAnimations({ subtree: true }).forEach((a) => a.pause());
   const r = b.getBoundingClientRect();
   const lr = layer.getBoundingClientRect();
   const cx = r.left + r.width / 2 - lr.left;

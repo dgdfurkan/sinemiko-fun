@@ -32,3 +32,45 @@ export const JESTER_IDEAS = [
   'Ağzını kapalı tutarak bir şarkı mırıldan, bir yandan da dans et.',
   'Kulaklarını oynatmaya çalışırken çok emin bir yüz ifadesi takın.',
 ];
+
+// Kıpırdama!: kaybedenin cezası (TikTok'taki "If You Move" akımındaki gibi küçük ev işleri ve tatlı görevler)
+export const PENALTIES = [
+  'Bu akşamın bulaşıkları senden.',
+  'Kazanana beş dakika omuz masajı.',
+  'Bir sonraki çayı ya da kahveyi sen yapacaksın.',
+  'Kazananın seçtiği şarkıyı ona bakarak söyle.',
+  'Bu gece kumanda kazananda, itiraz yok.',
+  'Kazanana üç tane içten iltifat et.',
+  'Yarınki kahvaltıyı sen hazırlıyorsun.',
+  'Kazananın canının çektiği atıştırmalığı getir.',
+  'Bir dakika boyunca kazananı öv, durmak yok.',
+  'Kazananın seçtiği bir hayvanı otuz saniye taklit et.',
+  'Bu hafta çöpü sen atıyorsun.',
+  'Kazanana sarıl ve on saniye bırakma.',
+  'Kazananın telefonuna tatlı bir sesli mesaj bırak.',
+  'Bir sonraki filmi kazanan seçer.',
+  'Kazananın saçını ya da ellerini iki dakika okşa.',
+  'Kazanana en sevdiği tatlıyı sözü ver, bu hafta içinde.',
+];
+
+// Yalan Dedektörü: cevaplayan gizli göreve göre doğruyu ya da yalanı söyler
+export const LIAR_QUESTIONS = [
+  'Hiç gizlice benim tabağımdan yedin mi?',
+  'İlk buluşmamızda heyecandan elin ayağın titredi mi?',
+  'Aldığım bir hediyeyi beğenmeyip çok beğendim dedin mi?',
+  'Bir diziyi benden gizli önden izledin mi?',
+  'Bugün beni en az bir kere düşündün mü?',
+  'Hiç alarmı kapatıp “beş dakika daha” diye uyuyakaldın mı?',
+  'Bana kızgınken “kızgın değilim” dediğin oldu mu?',
+  'Benden habersiz tatlı yedin mi?',
+  'Bir mesajımı görüp bilerek geç cevap verdin mi?',
+  'Benim kıyafetlerimden birini gizlice giydin mi?',
+  'Evde tek başınayken dans edip şarkı söyledin mi?',
+  'Bir filmde benden saklayarak ağladın mı?',
+  'Bana aşık olduğunu ilk ay içinde anladın mı?',
+  'Hiç bir şeyi “ben yaptım” deyip aslında yapmadın mı?',
+  'Fotoğraflarımdan birini telefonunda gizli bir klasörde saklıyor musun?',
+  'Benim şarkı söylememi gerçekten seviyor musun?',
+  'Hiç benim için yalandan “acıkmadım” dedin mi?',
+  'Benimle ilgili birine gizlice hava attın mı?',
+];

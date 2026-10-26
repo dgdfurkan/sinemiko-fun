@@ -262,6 +262,7 @@ const cardInner = (it) => html`<span class="wc-cat">${it.cat}</span><span class=
 export function pickCardScene(stage, {
   hand, item, draw, onGo, goLabel = 'Bununla Kaydet', allowCustom = true,
   customCat = 'Kendi Kelimen', customPlaceholder = 'Ne söyleyeceksin?', onChange = null,
+  finder = null, onSettings = null,
 }) {
   let cur = item;
   let mode = 'card';
@@ -274,11 +275,61 @@ export function pickCardScene(stage, {
   const customButtons = () => html`
     <button class="btn" data-act="back">${icon('back')}Kartlara Dön</button>
     <button class="btn btn--primary nudge" data-act="go" data-primary>${icon('mic')}${goLabel}</button>`;
-  const customInner = () => html`<span class="wc-cat">${customCat}</span><input class="field wc-input" maxlength="40" placeholder="${customPlaceholder}" aria-label="${customCat}" autocomplete="off">`;
+  const customInner = () => (finder
+    ? html`<span class="wc-cat">${customCat}</span>
+      <div class="find-row"><input class="field wc-input" maxlength="80" placeholder="${customPlaceholder}" aria-label="${customCat}" autocomplete="off"><button class="btn find-go" data-act="find">${icon('search')}Bul</button></div>
+      <div class="find-list" data-find hidden></div>`
+    : html`<span class="wc-cat">${customCat}</span><input class="field wc-input" maxlength="40" placeholder="${customPlaceholder}" aria-label="${customCat}" autocomplete="off">`);
+  let found = [];
+  let finding = 0;
+  // Şarkı bulucu: yazılanı arar, sonuçlardan biri seçilince kart o şarkı olur
+  async function runFind() {
+    const input = card.querySelector('input');
+    const list = card.querySelector('[data-find]');
+    const q = input ? input.value.replace(/\s+/g, ' ').trim() : '';
+    if (q.length < 2) {
+      if (input) {
+        input.classList.remove('shake');
+        void input.offsetWidth;
+        input.classList.add('shake');
+        input.focus();
+      }
+      sfx.boing();
+      return;
+    }
+    const my = ++finding;
+    list.hidden = false;
+    list.innerHTML = toHTML(html`<div class="find-wait"><span class="sh-spin dark"></span>Aranıyor...</div>`);
+    const res = await finder(q);
+    if (my !== finding || mode !== 'custom' || stage.scene !== scene) return;
+    found = res.songs;
+    const note = res.geminiError === 'anahtar' ? 'Gemini anahtarı geçersiz görünüyor. Ayarlar\'dan kontrol et.'
+      : !res.usedGemini ? 'Aklında yalnızca bir söz kaldıysa Ayarlar\'a Gemini anahtarı ekle, internetten bulayım.' : '';
+    list.innerHTML = toHTML(html`
+      ${found.length ? found.map((f, k) => html`<button class="find-item" data-act="pickfound" data-i="${k}">
+        ${f.art ? html`<img src="${f.art}" alt="" loading="lazy">` : html`<span class="find-ic">${icon('music')}</span>`}
+        <span class="find-t"><b>${f.text}</b><span>${f.hint || ''}</span></span>
+        <span class="find-src">${f.src}</span>
+      </button>`) : html`<p class="find-none">Bir şey bulamadım. Başka türlü yazmayı dene.</p>`}
+      ${note ? html`<p class="find-note">${note}${onSettings ? html` <button class="find-link" data-act="settings">Ayarları Aç</button>` : ''}</p>` : ''}`);
+    popIn(list.children);
+  }
+  const bindFindInput = () => {
+    const input = card.querySelector('input');
+    if (!finder || !input) return;
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      // Enter aramayı başlatır, kaydı değil
+      e.preventDefault();
+      runFind();
+    });
+  };
   const render = () => {
     card.innerHTML = toHTML(mode === 'custom' ? customInner() : cardInner(cur));
+    card.classList.toggle('finding', mode === 'custom' && !!finder);
     const input = card.querySelector('input');
     if (input) input.focus();
+    bindFindInput();
   };
   const setMode = (m) => {
     mode = m;
@@ -298,6 +349,15 @@ export function pickCardScene(stage, {
     },
     custom: () => setMode('custom'),
     back: () => setMode('card'),
+    find: () => runFind(),
+    pickfound: (b) => {
+      const f = found[Number(b.dataset.i)];
+      if (!f) return;
+      cur = { ...f, cat: f.cat || 'Bulduğun Şarkı' };
+      sfx.success();
+      setMode('card');
+    },
+    settings: () => { if (onSettings) onSettings(); },
     go: () => {
       if (mode === 'custom') {
         const input = card.querySelector('input');

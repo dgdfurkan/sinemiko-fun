@@ -11,99 +11,392 @@
       "id": "poz",
       "note": "Exciting commands for a pose race. The first line is a teasing build-up, stretched with suspense. Every pose name lands punchy and excited, like an order in a fun dance game.",
       "lines": [
-        ["sinemiko", "Sinemiko diyor ki..."],
-        ["pose-up", "Eller havaya!"],
-        ["pose-y", "Y harfi!"],
-        ["pose-t", "T pozu!"],
-        ["pose-left", "Sol el havada!"],
-        ["pose-right", "Sağ el havada!"],
-        ["pose-head", "Eller başa!"],
-        ["pose-heart", "Başının üstünde kalp!"],
-        ["pose-cross", "Kollar çapraz!"],
-        ["pose-muscle", "Pazı göster!"],
-        ["pose-think", "Çeneni tut!"],
-        ["pose-hide", "Yüzünü kapat!"],
-        ["pose-leanl", "Sola yat!"],
-        ["pose-leanr", "Sağa yat!"],
-        ["pose-point", "Partnerini göster!"],
-        ["pose-dab", "Dab!"],
-        ["pose-pray", "Avuçları birleştir!"]
+        [
+          "sinemiko",
+          "Sinemiko diyor ki..."
+        ],
+        [
+          "pose-up",
+          "Eller havaya!"
+        ],
+        [
+          "pose-y",
+          "Y harfi!"
+        ],
+        [
+          "pose-t",
+          "T pozu!"
+        ],
+        [
+          "pose-left",
+          "Sol el havada!"
+        ],
+        [
+          "pose-right",
+          "Sağ el havada!"
+        ],
+        [
+          "pose-head",
+          "Eller başa!"
+        ],
+        [
+          "pose-heart",
+          "Başının üstünde kalp!"
+        ],
+        [
+          "pose-cross",
+          "Kollar çapraz!"
+        ],
+        [
+          "pose-muscle",
+          "Pazı göster!"
+        ],
+        [
+          "pose-think",
+          "Çeneni tut!"
+        ],
+        [
+          "pose-hide",
+          "Yüzünü kapat!"
+        ],
+        [
+          "pose-leanl",
+          "Sola yat!"
+        ],
+        [
+          "pose-leanr",
+          "Sağa yat!"
+        ],
+        [
+          "pose-point",
+          "Partnerini göster!"
+        ],
+        [
+          "pose-dab",
+          "Dab!"
+        ],
+        [
+          "pose-pray",
+          "Avuçları birleştir!"
+        ]
       ]
     },
     {
       "id": "surat",
       "note": "Funny face commands. Act each one out with your voice: playful, a little silly, giggly where it fits.",
       "lines": [
-        ["face-wow", "Şok ol!"],
-        ["face-wink", "Göz kırp!"],
-        ["face-kiss", "Öpücük at!"],
-        ["face-smile", "Kocaman sırıt!"],
-        ["face-angry", "Kaşlarını çat!"],
-        ["face-closed", "Gözlerini sık!"],
-        ["face-side", "Yan gözle bak!"],
-        ["face-brows", "Kaşları kaldır!"],
-        ["face-mside", "Ağzını yana kaydır!"],
-        ["face-scream", "Sessiz çığlık!"],
-        ["face-tilt", "Kafanı yatır!"]
+        [
+          "face-wow",
+          "Şok ol!"
+        ],
+        [
+          "face-wink",
+          "Göz kırp!"
+        ],
+        [
+          "face-kiss",
+          "Öpücük at!"
+        ],
+        [
+          "face-smile",
+          "Kocaman sırıt!"
+        ],
+        [
+          "face-angry",
+          "Kaşlarını çat!"
+        ],
+        [
+          "face-closed",
+          "Gözlerini sık!"
+        ],
+        [
+          "face-side",
+          "Yan gözle bak!"
+        ],
+        [
+          "face-brows",
+          "Kaşları kaldır!"
+        ],
+        [
+          "face-mside",
+          "Ağzını yana kaydır!"
+        ],
+        [
+          "face-scream",
+          "Sessiz çığlık!"
+        ],
+        [
+          "face-tilt",
+          "Kafanı yatır!"
+        ]
       ]
     },
     {
       "id": "sayim",
       "note": "Countdown and starts. Numbers build suspense, each a little more excited than the one before. Start words explode with joy. Questions are warm and inviting.",
       "lines": [
-        ["cd-3", "Üç!"],
-        ["cd-2", "İki!"],
-        ["cd-1", "Bir!"],
-        ["go-poz", "Poz!"],
-        ["go-surat", "Surat!"],
-        ["go-patlat", "Patlat!"],
-        ["go-guldur", "Güldür!"],
-        ["go-bakis", "Bakış!"],
-        ["go-dondur", "Dondur!"],
-        ["go-kopyala", "Kopyala!"],
-        ["go-pozver", "Poz ver!"],
-        ["ready", "Hazır mısınız?"],
-        ["letsgo", "Hadi bakalım!"]
+        [
+          "cd-3",
+          "Üç!"
+        ],
+        [
+          "cd-2",
+          "İki!"
+        ],
+        [
+          "cd-1",
+          "Bir!"
+        ],
+        [
+          "go-poz",
+          "Poz!"
+        ],
+        [
+          "go-surat",
+          "Surat!"
+        ],
+        [
+          "go-patlat",
+          "Patlat!"
+        ],
+        [
+          "go-guldur",
+          "Güldür!"
+        ],
+        [
+          "go-bakis",
+          "Bakış!"
+        ],
+        [
+          "go-dondur",
+          "Dondur!"
+        ],
+        [
+          "go-kopyala",
+          "Kopyala!"
+        ],
+        [
+          "go-pozver",
+          "Poz ver!"
+        ],
+        [
+          "ready",
+          "Hazır mısınız?"
+        ],
+        [
+          "letsgo",
+          "Hadi bakalım!"
+        ]
       ]
     },
     {
       "id": "tepki",
       "note": "Reactions during the game. Cheers burst with joy. Teases come with a soft laugh. Disappointment is playful, never sad.",
       "lines": [
-        ["yay-1", "Süpersin!"],
-        ["yay-2", "Harika!"],
-        ["yay-3", "İşte bu!"],
-        ["yay-4", "Bravo!"],
-        ["trap", "Tuzağa düştün!"],
-        ["safe", "Kanmadın, aferin!"],
-        ["miss", "Yetişemedin!"],
-        ["copied", "Tıpatıp aynı!"],
-        ["nope", "Olmadı ama!"],
-        ["laughed", "Yakalandın! Güldün!"],
-        ["stone", "Taş gibi! Hiç gülmedi!"],
-        ["blinked", "Göz kırptın!"],
-        ["ran", "Kaçmak yok!"],
-        ["timeup", "Süre doldu!"],
-        ["gold", "Altın!"],
-        ["bomb", "Eyvah, bomba!"]
+        [
+          "yay-1",
+          "Süpersin!"
+        ],
+        [
+          "yay-2",
+          "Harika!"
+        ],
+        [
+          "yay-3",
+          "İşte bu!"
+        ],
+        [
+          "yay-4",
+          "Bravo!"
+        ],
+        [
+          "trap",
+          "Tuzağa düştün!"
+        ],
+        [
+          "safe",
+          "Kanmadın, aferin!"
+        ],
+        [
+          "miss",
+          "Yetişemedin!"
+        ],
+        [
+          "copied",
+          "Tıpatıp aynı!"
+        ],
+        [
+          "nope",
+          "Olmadı ama!"
+        ],
+        [
+          "laughed",
+          "Yakalandın! Güldün!"
+        ],
+        [
+          "stone",
+          "Taş gibi! Hiç gülmedi!"
+        ],
+        [
+          "blinked",
+          "Göz kırptın!"
+        ],
+        [
+          "ran",
+          "Kaçmak yok!"
+        ],
+        [
+          "timeup",
+          "Süre doldu!"
+        ],
+        [
+          "gold",
+          "Altın!"
+        ],
+        [
+          "bomb",
+          "Eyvah, bomba!"
+        ]
       ]
     },
     {
       "id": "isim",
       "note": "Turn calls and winners. Turn calls are bright and inviting. Winner lines are pure celebration, proud and happy, like announcing the champion of the night.",
       "lines": [
-        ["turn-0-poz", "Furkan, poz ver!"],
-        ["turn-1-poz", "Sinem, poz ver!"],
-        ["turn-0-kopya", "Furkan, kopyala!"],
-        ["turn-1-kopya", "Sinem, kopyala!"],
-        ["turn-0-stone", "Furkan, taş surat ol!"],
-        ["turn-1-stone", "Sinem, taş surat ol!"],
-        ["turn-0-stage", "Furkan, sahne senin!"],
-        ["turn-1-stage", "Sinem, sahne senin!"],
-        ["win-0", "Furkan kazandı!"],
-        ["win-1", "Sinem kazandı!"],
-        ["tie", "Berabere! İkiniz de harikasınız!"],
-        ["win-any", "Ve kazanan belli oldu!"]
+        [
+          "turn-0-poz",
+          "Furkan, poz ver!"
+        ],
+        [
+          "turn-1-poz",
+          "Sinem, poz ver!"
+        ],
+        [
+          "turn-0-kopya",
+          "Furkan, kopyala!"
+        ],
+        [
+          "turn-1-kopya",
+          "Sinem, kopyala!"
+        ],
+        [
+          "turn-0-stone",
+          "Furkan, taş surat ol!"
+        ],
+        [
+          "turn-1-stone",
+          "Sinem, taş surat ol!"
+        ],
+        [
+          "turn-0-stage",
+          "Furkan, sahne senin!"
+        ],
+        [
+          "turn-1-stage",
+          "Sinem, sahne senin!"
+        ],
+        [
+          "win-0",
+          "Furkan kazandı!"
+        ],
+        [
+          "win-1",
+          "Sinem kazandı!"
+        ],
+        [
+          "tie",
+          "Berabere! İkiniz de harikasınız!"
+        ],
+        [
+          "win-any",
+          "Ve kazanan belli oldu!"
+        ]
+      ]
+    },
+    {
+      "id": "yeni",
+      "note": "New games. Freeze game teases are whispered-playful and sneaky, trying to make the players laugh or move. The moment someone moves, burst out laughing. Match lines are joyful, mismatch lines are playful. Lie detector lines are dramatic and suspenseful like a TV quiz. Photo booth lines are warm and sweet.",
+      "lines": [
+        [
+          "freeze-go",
+          "Donun!"
+        ],
+        [
+          "freeze-1",
+          "Sakın kıpırdama..."
+        ],
+        [
+          "freeze-2",
+          "Heykel gibi duruyorsunuz..."
+        ],
+        [
+          "freeze-3",
+          "Burnuna bir sinek kondu..."
+        ],
+        [
+          "freeze-4",
+          "Arkanda bir şey var!"
+        ],
+        [
+          "freeze-5",
+          "Gıdı gıdı gıdı..."
+        ],
+        [
+          "freeze-6",
+          "Hapşıracak gibisin..."
+        ],
+        [
+          "freeze-7",
+          "Kulağın kaşınıyor mu?"
+        ],
+        [
+          "moved",
+          "Kıpırdadın!"
+        ],
+        [
+          "penalty",
+          "Ceza zamanı!"
+        ],
+        [
+          "tilt-go",
+          "Kafalar yana!"
+        ],
+        [
+          "match",
+          "Aynı kafa!"
+        ],
+        [
+          "mismatch",
+          "Ters köşe!"
+        ],
+        [
+          "liar-q",
+          "Doğru mu, yalan mı?"
+        ],
+        [
+          "liar-caught",
+          "Yalan yakalandı!"
+        ],
+        [
+          "liar-fooled",
+          "Kandırdı!"
+        ],
+        [
+          "liar-true",
+          "Doğruymuş!"
+        ],
+        [
+          "booth-smile",
+          "Gülümseyin!"
+        ],
+        [
+          "booth-go",
+          "Çek!"
+        ],
+        [
+          "booth-done",
+          "Ne güzel bir anı oldu!"
+        ]
       ]
     }
   ]

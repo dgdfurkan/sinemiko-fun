@@ -45,7 +45,7 @@ export function camController(shell, life) {
   let dpr = 1;
   const resize = () => {
     const r = card.getBoundingClientRect();
-    dpr = Math.min(2, window.devicePixelRatio || 1);
+    dpr = Math.min(1.5, window.devicePixelRatio || 1);
     cam.W = r.width;
     cam.H = r.height;
     canvas.width = Math.max(1, Math.round(r.width * dpr));
@@ -57,7 +57,18 @@ export function camController(shell, life) {
   // HUD sahnelerinde görüntü net, diğer sahnelerde arkada bulanık durur
   const dimSync = () => {
     const cur = stageEl.lastElementChild;
-    root.classList.toggle('cam-dim', !!cur && !cur.classList.contains('hud'));
+    const dim = !!cur && !cur.classList.contains('hud');
+    root.classList.toggle('cam-dim', dim);
+    // Sonuç ekranlarında takip durur; ana iş parçacığı boşalır, düğmeler anında tepki verir
+    if (cam.tracker) {
+      if (dim) cam.tracker.stop();
+      else cam.tracker.start();
+    }
+    // Bulanık arka planda görüntü donar; canlı videoya her karede bulanıklık uygulanmaz
+    if (cam.on) {
+      if (dim) video.pause();
+      else video.play().catch(() => {});
+    }
   };
   const mo = new MutationObserver(dimSync);
   mo.observe(stageEl, { childList: true });
@@ -120,7 +131,7 @@ export function camController(shell, life) {
         }
       },
     });
-    cam.tracker.start();
+    dimSync();
     lastT = performance.now();
     raf = requestAnimationFrame(loop);
     return true;
@@ -155,13 +166,15 @@ export function camController(shell, life) {
     card.querySelector('.cam-flash').animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: 420, easing: 'ease-out' });
   };
 
-  // Oyuncunun yüzünden ya da gövdesinden aynalı, kare bir fotoğraf keser
-  cam.snapshot = (box, pad = 0.35, size = 360) => {
+  // Oyuncunun yüzünden ya da gövdesinden aynalı, kare bir fotoğraf keser.
+  // Kameranın tam çözünürlüğünde kesilir; 8K albümde yumuşamasın diye küçültülmez.
+  cam.snapshot = (box, pad = 0.35, size = 0) => {
     if (!box || !video.videoWidth) return null;
     const vw = video.videoWidth;
     const vh = video.videoHeight;
     const want = Math.max(box.w * vw, box.h * vh) * (1 + pad * 2);
     const s = Math.min(want, vw, vh);
+    size = size || Math.round(Math.max(480, Math.min(1600, s)));
     const cx = (1 - box.cx) * vw;
     const cy = box.cy * vh;
     const sx = Math.max(0, Math.min(vw - s, cx - s / 2));
@@ -172,8 +185,22 @@ export function camController(shell, life) {
     const og = out.getContext('2d');
     og.translate(size, 0);
     og.scale(-1, 1);
+    og.imageSmoothingQuality = 'high';
     og.drawImage(video, sx, sy, s, s, 0, 0, size, size);
-    return out.toDataURL('image/jpeg', 0.86);
+    return out.toDataURL('image/jpeg', 0.92);
+  };
+
+  // Kadrajın tamamı, aynalı ve tam çözünürlükte (fotoğraf kabini için)
+  cam.frameShot = () => {
+    if (!video.videoWidth) return null;
+    const out = document.createElement('canvas');
+    out.width = video.videoWidth;
+    out.height = video.videoHeight;
+    const og = out.getContext('2d');
+    og.translate(out.width, 0);
+    og.scale(-1, 1);
+    og.drawImage(video, 0, 0);
+    return out.toDataURL('image/jpeg', 0.92);
   };
 
   life.add(() => {
@@ -466,87 +493,6 @@ export function drawSkeleton(g, cam, p, i, { glow = 0, label = nameOf(i), color 
   }
 }
 
-/* ---------- Albüm ---------- */
-
-// Fotoğraflardan indirilebilir bir anı kolajı yapar
-export async function albumImage(title, items) {
-  const cols = Math.min(4, Math.max(2, Math.ceil(Math.sqrt(items.length))));
-  const rows = Math.ceil(items.length / cols);
-  const cw = 300;
-  const ch = 360;
-  const gap = 36;
-  const W = cols * cw + (cols + 1) * gap;
-  const H = 170 + rows * ch + (rows + 1) * gap;
-  const c = document.createElement('canvas');
-  c.width = W;
-  c.height = H;
-  const g = c.getContext('2d');
-  g.fillStyle = '#fff3e2';
-  g.fillRect(0, 0, W, H);
-  g.fillStyle = '#2a16360f';
-  for (let y = 12, r = 0; y < H; y += 28, r++) for (let x = 12 + (r % 2) * 14; x < W; x += 28) g.fillRect(x, y, 4, 4);
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.font = '400 72px "Lilita One", sans-serif';
-  g.lineJoin = 'round';
-  g.lineWidth = 16;
-  g.strokeStyle = '#2a1636';
-  g.strokeText(title, W / 2, 92);
-  g.fillStyle = '#ff5fa2';
-  g.fillText(title, W / 2, 92);
-  const imgs = await Promise.all(items.map((it) => new Promise((resolve) => {
-    if (!it.img) {
-      resolve(null);
-      return;
-    }
-    const im = new Image();
-    im.onload = () => resolve(im);
-    im.onerror = () => resolve(null);
-    im.src = it.img;
-  })));
-  items.forEach((it, k) => {
-    const col = k % cols;
-    const row = Math.floor(k / cols);
-    const x = gap + col * (cw + gap);
-    const y = 170 + gap + row * (ch + gap);
-    g.save();
-    g.translate(x + cw / 2, y + ch / 2);
-    g.rotate((((k * 7) % 5) - 2) * 0.012);
-    g.translate(-cw / 2, -ch / 2);
-    g.fillStyle = '#2a1636';
-    roundRect(g, 0, 8, cw, ch, 14);
-    g.fill();
-    g.fillStyle = '#fff';
-    roundRect(g, 0, 0, cw, ch, 14);
-    g.fill();
-    g.lineWidth = 5;
-    g.strokeStyle = '#2a1636';
-    g.stroke();
-    if (imgs[k]) g.drawImage(imgs[k], 14, 14, cw - 28, cw - 28);
-    else {
-      g.fillStyle = '#efe4d6';
-      g.fillRect(14, 14, cw - 28, cw - 28);
-    }
-    g.fillStyle = '#2a1636';
-    g.font = '700 34px Caveat, cursive';
-    g.fillText(it.cap, cw / 2, cw + 8);
-    g.fillStyle = it.color || '#2a1636';
-    g.font = '600 18px Fredoka, sans-serif';
-    g.fillText(it.by || '', cw / 2, cw + 38);
-    g.restore();
-  });
-  return c.toDataURL('image/jpeg', 0.9);
-}
-
-export function downloadURL(url, name) {
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.append(a);
-  a.click();
-  a.remove();
-}
-
 /* ---------- Final ekranı albümü ---------- */
 
 export const albumStripHTML = (items) => html`
@@ -558,7 +504,4 @@ export const albumStripHTML = (items) => html`
     </figure>`)}
   </div>`;
 
-export async function downloadAlbum(title, items, file) {
-  const url = await albumImage(title, items);
-  downloadURL(url, file);
-}
+export { downloadAlbum } from './album.js';

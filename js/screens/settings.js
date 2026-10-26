@@ -22,6 +22,11 @@ export function openSettings() {
       <div class="set-row"><span class="opt-label">Sesli Sunucu</span>${switchHTML('voiceOn', store.get('voiceOn'), 'Kamera oyunlarında sesli sunucu')}</div>
       <div class="set-row"><span class="opt-label">Baloncuklar</span>${switchHTML('bubbles', store.get('bubbles'), 'Baloncuklar')}</div>
     </div>
+    <div class="set-key">
+      <span class="opt-label">Gemini Anahtarı</span>
+      <input class="field" data-gemini type="password" autocomplete="off" spellcheck="false" placeholder="İsteğe bağlı" value="${store.get('geminiKey')}" aria-label="Gemini API anahtarı">
+      <span class="opt-note">Mırıldan Bakalım'da yarım hatırladığın sözden şarkıyı bulur ve tam halini getirir. Anahtar yalnızca bu tarayıcıda saklanır. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Anahtar al</a></span>
+    </div>
     <p class="opt-note">Bugüne kadar ${store.get('popped')} baloncuk patlattınız. İsimler ve ayarlar bu tarayıcıda saklanır.</p>
     <button class="btn btn--primary" data-act="done" data-primary>Tamam</button>`, {
     actions: { done: (t, e, close) => close() },
@@ -32,6 +37,9 @@ export function openSettings() {
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
     input.addEventListener('blur', () => { input.value = store.get('names')[Number(input.dataset.name)]; });
   });
+  const gem = el.querySelector('[data-gemini]');
+  gem.addEventListener('change', () => store.set('geminiKey', gem.value.trim()));
+  gem.addEventListener('keydown', (e) => { if (e.key === 'Enter') gem.blur(); });
   bindSwitch(el.querySelector('[data-switch="musicOn"]'), { value: store.get('musicOn'), onChange: (v) => store.set('musicOn', v) });
   bindSwitch(el.querySelector('[data-switch="voiceOn"]'), { value: store.get('voiceOn'), onChange: (v) => store.set('voiceOn', v) });
   bindSwitch(el.querySelector('[data-switch="bubbles"]'), { value: store.get('bubbles'), onChange: (v) => store.set('bubbles', v) });

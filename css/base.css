@@ -72,6 +72,10 @@ body[data-theme="mirror"]     { --accent: #22b38a; --accent-d: #179672; --accent
 body[data-theme="faces"]      { --accent: #ff9f1c; --accent-d: #e88600; --accent-soft: #fff0d6; --wash-a: #ffc25e5a; --wash-b: #ff8fc04c; }
 body[data-theme="nolaugh"]    { --accent: #ff4f62; --accent-d: #e5384b; --accent-soft: #ffdfe3; --wash-a: #ff86935a; --wash-b: #ffd96a55; }
 body[data-theme="stare"]      { --accent: #4b6bff; --accent-d: #3452e6; --accent-soft: #e0e6ff; --wash-a: #8a9fff5a; --wash-b: #ff9fc94c; }
+body[data-theme="freeze"]     { --accent: #19aebf; --accent-d: #0f93a3; --accent-soft: #d6f6f9; --wash-a: #7fe3ee5a; --wash-b: #ff9fc94c; }
+body[data-theme="tilt"]       { --accent: #ff7a3d; --accent-d: #e8602a; --accent-soft: #ffe6d8; --wash-a: #ffb08a5a; --wash-b: #9fd2ff4c; }
+body[data-theme="liar"]       { --accent: #8a4dff; --accent-d: #7238e6; --accent-soft: #ece2ff; --wash-a: #b99bff5a; --wash-b: #ff8a974c; }
+body[data-theme="booth"]      { --accent: #ff5fa2; --accent-d: #e8458a; --accent-soft: #ffe0ee; --wash-a: #ff9ec65a; --wash-b: #ffd96a55; }
 body[data-theme="truthdare"]  { --accent: var(--cherry); --accent-d: var(--cherry-d); --accent-soft: #ffdade; --wash-a: #ff6f805a; --wash-b: #ffd96a66; }
 
 *, *::before, *::after { box-sizing: border-box; }

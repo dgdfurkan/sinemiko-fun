@@ -7,8 +7,9 @@ import { scoreboard } from '../ui/scoreboard.js';
 import { segHTML, bindSeg } from '../ui/controls.js';
 import { countdown } from '../ui/countdown.js';
 import { sfx } from '../audio/sfx.js';
-import { lobbyHTML, optHTML, celebrate, versusFinaleHTML, finaleButtons } from './common.js';
-import { camShell, camController, camBoot, waitPlayers, missingText, drawSkeleton, tag, PCOL } from './cam.js';
+import { lobbyHTML, optHTML, celebrate, versusFinaleHTML } from './common.js';
+import { camShell, camController, camBoot, waitPlayers, missingText, drawSkeleton, tag, PCOL, albumStripHTML, downloadAlbum } from './cam.js';
+import { icon } from '../ui/icons.js';
 import { announcer } from '../audio/announcer.js';
 
 const TINTS = ['#9fdcff', '#ffc2dc', '#c6f28e', '#ffe08a', '#d6c4ff', '#9ff0d6'];
@@ -72,7 +73,7 @@ export function mount(view, { game, navigate }) {
 
   async function play() {
     const secs = Number(cfg.secs);
-    g = { over: false, bubbles: [], bits: [], texts: [], stats: [[0, 0, 0], [0, 0, 0]], spawnAt: 0, t0: 0, left: secs, running: false };
+    g = { over: false, bubbles: [], bits: [], texts: [], stats: [[0, 0, 0], [0, 0, 0]], spawnAt: 0, t0: 0, left: secs, running: false, album: [], shotAt: 0 };
     scoreboard.show({ mode: 'versus', mid: `${secs} sn` });
     announcer.preload(['go-patlat', 'cd-3', 'cd-2', 'cd-1', 'gold', 'bomb', 'timeup']);
     const scene = stage.show(html`
@@ -142,6 +143,16 @@ export function mount(view, { game, navigate }) {
       sfx.pop(0.8 + Math.random() * 0.5);
     }
     scoreboard.add(who, pts, null, { quiet: true });
+    // Altın ve bomba anları albüme girer; art arda çekim olmasın diye en az iki saniye ara
+    const p = cam.players[who];
+    const now = performance.now();
+    if (p && b.type !== 'normal' && g.album.length < 10 && now - g.shotAt > 2000) {
+      const img = cam.snapshot(p.box, 0.08);
+      if (img) {
+        g.shotAt = now;
+        g.album.push({ img, cap: b.type === 'gold' ? 'Altın Yakaladı!' : 'Bombaya Dokundu!', by: nameOf(who), color: PCOL[who] });
+      }
+    }
     const n = b.type === 'bomb' ? 22 : 14;
     for (let k = 0; k < n; k++) {
       const a = (Math.PI * 2 * k) / n + rand(-0.2, 0.2);
@@ -298,10 +309,17 @@ export function mount(view, { game, navigate }) {
         <span><b>${g.stats[i][1]}</b> altın</span>
         <span><b>${g.stats[i][2]}</b> bomba</span>
       </div>`;
+    const album = g.album;
     stage.show(html`
       ${podium}
       <div class="pop-stats" data-in>${stat(0)}${stat(1)}</div>
-      ${finaleButtons()}`, {
+      ${album.length ? albumStripHTML(album) : ''}
+      <div class="row" data-in>
+        ${album.length ? html`<button class="btn" data-act="dl">${icon('download')}8K Albüm İndir</button>` : ''}
+        <button class="btn" data-act="home">${icon('home')}Oyunlara Dön</button>
+        <button class="btn btn--primary nudge" data-act="again" data-primary>${icon('replay')}Tekrar Oyna</button>
+      </div>`, {
+      dl: () => downloadAlbum('Baloncuk Anları', album, 'sinemiko-baloncuk-anlari.jpg'),
       home: () => navigate('#/'),
       again: () => ready(),
     }, { className: 'cam-final' });

@@ -19,6 +19,8 @@ import {
   lobbyHTML, optHTML, FIRST_OPTIONS, coinFlip, celebrate, versusFinaleHTML, finaleButtons,
   other, pSpan, flipEl, popIn, bumpEl, shakeEl,
 } from './common.js';
+import { songHelper } from './songhelp.js';
+import { songByTitle } from './songfind.js';
 import { micGate, clipCardHTML, wireClip as wireClipBase, miniPlayer, recordScene as recordSceneBase } from './mic.js';
 
 const MAX_SEC = 10;
@@ -34,6 +36,8 @@ export function mount(view, { game, navigate }) {
   view.innerHTML = '<section class="screen game game-reverse"><div class="stage"></div></section>';
   const stage = new Stage(view.querySelector('.stage'), life);
   const rec = new VoiceRecorder();
+  // Şarkılar kategorisinde tur bitince şarkının tam hali ve sözleri dinlenebilir
+  const helper = songHelper(view.querySelector('.game-reverse'), life);
   life.add(() => {
     rec.close();
     stopClip();
@@ -108,6 +112,7 @@ export function mount(view, { game, navigate }) {
   /* ---------- Tur akışı ---------- */
 
   function newRound() {
+    helper.hide();
     const speaker = (g.first + g.round) % 2;
     g.cur = { speaker, guesser: other(speaker), word: drawCard(), a: null, aRev: null, b: null, bRev: null, listens: 0, guess: '', judged: false };
     scoreboard.setMid(`Tur ${g.round + 1} / ${g.total}`);
@@ -454,6 +459,7 @@ export function mount(view, { game, navigate }) {
   function recap(bonus) {
     const c = g.cur;
     const last = g.round + 1 >= g.total;
+    if (c.word.cat === 'Şarkılar') helper.show(songByTitle(c.word.text, c.word.hint));
     const mood = (i) => {
       if (i === c.guesser) {
         if (c.verdict === 'full') return { mood: 'laugh', eyes: 'happy', pose: 'cheer', props: 'heart' };
@@ -494,6 +500,7 @@ export function mount(view, { game, navigate }) {
 
   function final() {
     g.over = true;
+    helper.hide();
     scoreboard.setActive(-1);
     const scores = scoreboard.scores;
     const fin = versusFinaleHTML(scores, { lines: { tie: 'Berabere! Kulaklar Eşit' } });

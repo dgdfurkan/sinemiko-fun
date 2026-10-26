@@ -18,7 +18,9 @@ import { burst } from '../fx/confetti.js';
 import { HUM_CATS } from '../data/voice.js';
 import { lobbyHTML, optHTML, FIRST_OPTIONS, coinFlip, celebrate, versusFinaleHTML, finaleButtons, other, pSpan, shakeEl } from './common.js';
 import { micGate, clipCardHTML, wireClip, miniPlayer, recordScene, pickCardScene } from './mic.js';
-import { songHelper } from './songhelp.js';
+import { songHelper, ytField } from './songhelp.js';
+import { findSongs } from './songfind.js';
+import { openSettings } from '../screens/settings.js';
 
 const MAX_TRIES = 3;
 const initials = (t) => t.split(' ').map((w) => (w ? `${w[0]}${'_'.repeat(Math.max(0, [...w].length - 1))}` : w)).join(' ');
@@ -85,7 +87,7 @@ export function mount(view, { game, navigate }) {
 
   function buildDeck() {
     const cats = HUM_CATS.filter((c) => cfg.cats.has(c.id));
-    return shuffle(cats.flatMap((c) => c.items.map(([text, hint, it, lr]) => ({ text, hint, it, lr, cat: c.name }))));
+    return shuffle(cats.flatMap((c) => c.items.map(([text, hint, it, lr, syn, yt]) => ({ text, hint, it, lr, syn, ...ytField(yt), cat: c.name }))));
   }
 
   function drawCard() {
@@ -122,7 +124,9 @@ export function mount(view, { game, navigate }) {
       draw: () => drawCard(),
       allowCustom: true,
       customCat: 'Kendi Şarkın',
-      customPlaceholder: 'Hangi şarkı?',
+      customPlaceholder: 'Şarkı, sanatçı ya da aklında kalan bir söz',
+      finder: (q) => findSongs(q),
+      onSettings: () => openSettings(),
       goLabel: 'Mırıldanmaya Geç',
       onChange: (it) => helper.show(it),
       onGo: (it) => {
