@@ -121,7 +121,7 @@
 .cd-flash { grid-area: 1 / 1; width: 40vmin; height: 40vmin; border-radius: 50%; background: var(--accent-soft); border: var(--bw) solid var(--ink); }
 
 /* Genel hareketler */
-@keyframes floaty { 0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); } 50% { transform: translateY(-8px) rotate(calc(var(--rot, 0deg) * -1)); } }
+@keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 @keyframes jelly { 0% { transform: scale(1, 1); } 30% { transform: scale(1.18, .82); } 45% { transform: scale(.88, 1.12); } 60% { transform: scale(1.06, .94); } 75% { transform: scale(.98, 1.02); } 100% { transform: scale(1, 1); } }
 @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
 

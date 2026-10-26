@@ -8,10 +8,11 @@
   color: var(--c);
   -webkit-text-stroke: .12em var(--ink); paint-order: stroke fill;
   text-shadow: 0 .075em 0 var(--ink);
-  transform: rotate(var(--r));
+  rotate: var(--r);
   animation: chIn .8s var(--spring) both;
   animation-delay: calc(var(--i) * 55ms + 100ms);
 }
+.logo .ch:nth-child(even) { animation-name: chInR; }
 .logo .ch:hover { animation: jelly .6s; }
 .logo-fun {
   display: inline-block;
@@ -26,7 +27,8 @@
   box-shadow: .06em .1em 0 var(--sun);
   animation: funIn .9s var(--spring) .6s both;
 }
-@keyframes chIn { from { opacity: 0; transform: translateY(-1.2em) rotate(calc(var(--r) * -4)) scale(.6); } }
+@keyframes chIn { from { opacity: 0; translate: 0 -1.2em; scale: .6; rotate: 14deg; } }
+@keyframes chInR { from { opacity: 0; translate: 0 -1.2em; scale: .6; rotate: -14deg; } }
 @keyframes funIn { from { opacity: 0; transform: rotate(-40deg) scale(.2); } }
 
 /* ---------- Açılış ---------- */
@@ -34,7 +36,7 @@
 .splash-inner { display: flex; flex-direction: column; align-items: center; gap: clamp(14px, 3vh, 34px); padding: 0 var(--gutter); text-align: center; }
 .splash-duo { display: flex; align-items: center; justify-content: center; gap: clamp(8px, 2vw, 34px); flex-wrap: wrap; }
 .splash-blob { width: clamp(90px, 13vw, 210px); height: auto; animation: floaty 3.2s ease-in-out infinite; }
-.splash-blob:last-child { animation-delay: -1.6s; --rot: 3deg; }
+.splash-blob:last-child { animation-delay: -1.6s; rotate: 3deg; }
 .logo--splash { font-size: clamp(54px, min(10vw, 16vh), 190px); }
 .splash-sub { font-size: clamp(26px, 3vw, 46px); }
 .splash-go { font-size: clamp(24px, min(2.6vw, 4.4vh), 44px); }
@@ -122,14 +124,17 @@
   background: var(--gc);
   border: var(--bw) solid var(--ink); border-radius: var(--r-lg);
   box-shadow: 0 8px 0 var(--ink);
-  transform: rotate(var(--tilt));
+  rotate: var(--tilt);
   cursor: pointer;
-  transition: transform .4s var(--spring), box-shadow .4s var(--spring);
+  transition: transform .4s var(--spring), rotate .4s var(--spring), box-shadow .4s var(--spring);
   animation: cardIn .7s var(--spring) both;
   animation-delay: calc(var(--d) + 250ms);
   -webkit-tap-highlight-color: transparent;
 }
-@keyframes cardIn { from { opacity: 0; transform: translateY(60px) rotate(calc(var(--tilt) * 4)) scale(.85); } }
+.gcard:nth-child(even) { animation-name: cardInR; }
+/* Anahtar karelerde CSS değişkeni yok: tarayıcı animasyonu ekran kartına verir, ana iş parçacığı boş kalır */
+@keyframes cardIn { from { opacity: 0; translate: 0 60px; scale: .85; rotate: -6deg; } }
+@keyframes cardInR { from { opacity: 0; translate: 0 60px; scale: .85; rotate: 6deg; } }
 .gcard-dots {
   position: absolute; inset: 0; pointer-events: none;
   background-image: radial-gradient(#ffffff55 2px, transparent 2.5px);
@@ -173,10 +178,10 @@
 .featured .gcard-go { width: 56px; height: 56px; transform: none; }
 .featured .gcard-go svg { width: 30px; height: 30px; }
 @media (hover: hover) {
-  .gcard:hover { transform: rotate(0) translateY(-8px) scale(1.025); box-shadow: 0 16px 0 var(--ink); z-index: 2; }
+  .gcard:hover { rotate: 0deg; transform: translateY(-8px) scale(1.025); box-shadow: 0 16px 0 var(--ink); z-index: 2; }
   .gcard:hover .gcard-go { transform: none; }
 }
-.gcard:active { transform: translateY(4px) scale(.99); box-shadow: 0 3px 0 var(--ink); transition-duration: .08s; }
+.gcard:active { rotate: 0deg; transform: translateY(4px) scale(.99); box-shadow: 0 3px 0 var(--ink); transition-duration: .08s; }
 .gcard:focus-visible { outline: 4px solid var(--ink); outline-offset: 5px; }
 /* Kart çizimleri yalnızca üzerine gelince ya da sırası gelince oynar.
    24 kartın hepsi aynı anda oynayınca SVG her karede yeniden çiziliyor, tıklamalar kasıyordu. */
@@ -468,7 +473,14 @@
 .verdict-box.pending { opacity: 0; transform: translateY(26px) scale(.95); pointer-events: none; }
 .verdict-q { margin: 0; font: 700 calc(var(--fs-lead) * 1.2)/1 var(--hand); color: var(--ink-2); }
 .btn .pts { margin-left: .2em; font-size: .8em; opacity: .95; }
-.btn.suggest { animation: suggest 1.3s ease-in-out infinite; }
+/* Halka ayrı katmanda büyüyüp söner; düğmenin gölgesi her karede yeniden çizilmez */
+.btn.suggest { isolation: isolate; }
+.btn.suggest::before {
+  content: ''; position: absolute; inset: -5px; z-index: -1;
+  border: 4px solid #ffcd3c; border-radius: calc(var(--r-md) + 5px);
+  pointer-events: none;
+  animation: suggest 1.3s ease-out infinite;
+}
 .btn.suggest::after {
   content: 'Önerilen';
   position: absolute; top: -16px; right: -12px;
@@ -479,7 +491,7 @@
   border: 2px solid var(--ink); border-radius: 8px;
   transform: rotate(8deg);
 }
-@keyframes suggest { 0%, 100% { box-shadow: 0 6px 0 var(--ink), 0 0 0 0 #ffcd3c00; } 50% { box-shadow: 0 6px 0 var(--ink), 0 0 0 7px #ffcd3caa; } }
+@keyframes suggest { 0% { opacity: .95; transform: scale(1); } 100% { opacity: 0; transform: scale(1.12, 1.3); } }
 
 /* Küçük oynatıcılar */
 .mini-clips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; width: min(880px, 100%); }

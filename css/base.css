@@ -1,8 +1,5 @@
 /* Sinemiko Fun: renkler, yazı tipleri, sahne iskeleti */
 
-@property --wash-a { syntax: '<color>'; inherits: true; initial-value: #ff9ec955; }
-@property --wash-b { syntax: '<color>'; inherits: true; initial-value: #ffd96a66; }
-
 :root {
   --ink: #2a1636;
   --ink-2: #5b4568;
@@ -43,10 +40,11 @@
   --gutter: clamp(14px, 2.2vw, 40px);
 }
 
+/* Tema renkleri geçiş perdesi kapalıyken değişir. Gövdede renk geçişi yapmak her karede
+   sayfadaki bütün öğelerin stilini yeniden hesaplatıyordu (perde açılırken kare düşüren buydu). */
 body {
   --wash-a: #ff9ec955;
   --wash-b: #ffd96a66;
-  transition: --wash-a .9s ease, --wash-b .9s ease;
 }
 body[data-theme="home"]       { --accent: var(--pink);   --accent-d: var(--pink-d);   --accent-soft: #ffdcec; --wash-a: #ff9ec950; --wash-b: #ffd96a66; }
 body[data-theme="reverse"]    { --accent: var(--pink);   --accent-d: var(--pink-d);   --accent-soft: #ffdcec; --wash-a: #ff7ab85c; --wash-b: #b79cff5c; }
@@ -113,7 +111,7 @@ img, svg, canvas { display: block; }
 .grain { position: absolute; inset: 0; opacity: .12; background-size: 220px 220px; }
 .pattern, .wash { will-change: transform; }
 /* Kayıt ve dinleme sırasında arka plan hareketi durur, tüm güç sese kalır */
-body.audio-focus .pattern, body.audio-focus .wash { animation-play-state: paused; }
+body.audio-focus .pattern, body.audio-focus .wash, body.wiping .pattern, body.wiping .wash { animation-play-state: paused; }
 @keyframes patternDrift { to { transform: translate3d(240px, 240px, 0); } }
 @keyframes washDrift {
   0%   { transform: translate3d(0, 0, 0) rotate(0deg); }

@@ -10,9 +10,12 @@ let raf = 0;
 let W = 0;
 let H = 0;
 let dpr = 1;
+let last = 0;
+const MAX_PARTS = 650;
 
+// Konfeti küçük parçalar; 1,5 kat çözünürlük yeterince keskin ve tam ekran tuvalin yükünü yarıya indirir
 function resize() {
-  dpr = Math.min(2, window.devicePixelRatio || 1);
+  dpr = Math.min(1.5, window.devicePixelRatio || 1);
   W = window.innerWidth;
   H = window.innerHeight;
   canvas.width = Math.round(W * dpr);
@@ -44,29 +47,35 @@ function star(s) {
   g.closePath();
 }
 
-function loop() {
-  g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  g.clearRect(0, 0, W, H);
+// Fizik zamana bağlı: 60 ya da 120 Hz ekranda aynı hızda, takılan karede de ileri sarmaz
+function loop(t) {
+  const k = last ? Math.min(3, (t - last) / (1000 / 60)) : 1;
+  last = t;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, canvas.width, canvas.height);
+  g.strokeStyle = '#2a1636';
+  g.lineWidth = 1.6;
   const next = [];
   for (const p of parts) {
-    p.life++;
-    p.vx *= p.drag;
-    p.vy = p.vy * p.drag + p.gravity;
-    p.x += p.vx + Math.sin(p.life * p.wobbleSpeed) * p.wobble;
-    p.y += p.vy;
-    p.rot += p.vr;
+    p.life += k;
+    const drag = p.drag ** k;
+    p.vx *= drag;
+    p.vy = p.vy * drag + p.gravity * k;
+    p.x += (p.vx + Math.sin(p.life * p.wobbleSpeed) * p.wobble) * k;
+    p.y += p.vy * k;
+    p.rot += p.vr * k;
+    if (p.life >= p.ttl || p.y >= H + 40) continue;
+    next.push(p);
     const fade = p.life > p.ttl - 30 ? Math.max(0, (p.ttl - p.life) / 30) : 1;
-    if (p.life < p.ttl && p.y < H + 40) next.push(p);
-    g.save();
-    g.translate(p.x, p.y);
-    g.rotate(p.rot);
+    // save/restore yerine tek dönüşüm: yüzlerce parçada belirgin hız farkı
+    const c = Math.cos(p.rot) * dpr;
+    const sn = Math.sin(p.rot) * dpr;
+    g.setTransform(c, sn, -sn, c, p.x * dpr, p.y * dpr);
     g.globalAlpha = fade;
     g.fillStyle = p.color;
-    g.strokeStyle = '#2a1636';
-    g.lineWidth = 1.6;
     if (p.shape === 'rect') {
-      g.scale(1, Math.cos(p.life * p.flip));
-      g.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+      const h = (p.size / 2) * Math.cos(p.life * p.flip);
+      g.fillRect(-p.size / 2, -h / 2, p.size, h);
     } else if (p.shape === 'circle') {
       g.beginPath();
       g.arc(0, 0, p.size / 2.6, 0, Math.PI * 2);
@@ -80,18 +89,23 @@ function loop() {
       g.fill();
       g.stroke();
     }
-    g.restore();
   }
+  g.globalAlpha = 1;
   parts = next;
   if (parts.length) raf = requestAnimationFrame(loop);
   else {
     raf = 0;
-    g.clearRect(0, 0, W, H);
+    last = 0;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, canvas.width, canvas.height);
   }
 }
 
 function start() {
-  if (!raf) raf = requestAnimationFrame(loop);
+  if (!raf) {
+    last = 0;
+    raf = requestAnimationFrame(loop);
+  }
 }
 
 function make(x, y, vx, vy, o) {
@@ -124,17 +138,17 @@ export function burst(x, y, opts = {}) {
     const v = rand(o.power * 0.35, o.power);
     parts.push(make(x, y, Math.cos(a) * v, Math.sin(a) * v, o));
   }
-  if (parts.length > 900) parts.splice(0, parts.length - 900);
+  if (parts.length > MAX_PARTS) parts.splice(0, parts.length - MAX_PARTS);
   start();
 }
 
 // Ekranın tepesinden yağmur gibi döker
-export function rain({ duration = 2400, perFrame = 5, colors = COLORS, shapes = ['rect', 'circle', 'heart', 'star'] } = {}) {
+export function rain({ duration = 2400, perFrame = 3, colors = COLORS, shapes = ['rect', 'circle', 'heart', 'star'] } = {}) {
   if (!g) return;
   const o = { colors, shapes, gravity: 0.12, size: [8, 14], ttl: [240, 360] };
   const end = performance.now() + duration;
   const drip = () => {
-    for (let i = 0; i < perFrame; i++) parts.push(make(rand(0, W), rand(-60, -10), rand(-1.5, 1.5), rand(1, 4), o));
+    for (let i = 0; i < perFrame && parts.length < MAX_PARTS; i++) parts.push(make(rand(0, W), rand(-60, -10), rand(-1.5, 1.5), rand(1, 4), o));
     start();
     if (performance.now() < end) requestAnimationFrame(drip);
   };

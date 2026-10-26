@@ -194,8 +194,15 @@ async function doRoute() {
     current = { key: 'home', inst: mountHome(view, { navigate }) };
   }
   window.dispatchEvent(new Event('sf:scene'));
+  // Yeni ekranın stil, yerleşim ve çizimi perde kapalıyken biter; perde açılırken tarayıcı yalnızca perdeyle uğraşır
+  await nextFrames(2);
   await reveal();
 }
+
+const nextFrames = (n) => new Promise((resolve) => {
+  const step = () => (n-- <= 0 ? resolve() : requestAnimationFrame(step));
+  requestAnimationFrame(step);
+});
 
 window.addEventListener('hashchange', () => route());
 

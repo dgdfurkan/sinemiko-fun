@@ -102,7 +102,8 @@ export function mountHome(view, { navigate }) {
   // Vitrin: her iki saniyede bir iki kartın çizimi birkaç saniye oynar; hepsi aynı anda oynamaz
   if (!reducedMotion()) {
     life.interval(() => {
-      const cards = [...grid.querySelectorAll('.gcard:not(.play)')];
+      // Koyu kartın çizimi gölge filtresiyle çizilir; oynarken her karede pahalı, vitrine girmez
+      const cards = [...grid.querySelectorAll('.gcard:not(.play):not(.dark)')];
       for (let k = 0; k < 2 && cards.length; k++) {
         const c = cards.splice(Math.floor(Math.random() * cards.length), 1)[0];
         c.classList.add('play');

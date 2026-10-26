@@ -17,9 +17,11 @@ export async function cover({ x = window.innerWidth / 2, y = window.innerHeight 
   w.style.setProperty('--wipe-a', a);
   w.style.setProperty('--wipe-b', b);
   w.classList.add('on');
+  // Geçiş boyunca arka plan hareketi durur; ekran kartı yalnızca perdeyi çizer
+  document.body.classList.add('wiping');
   const s = radius(x, y) / BASE;
   const [la, lb] = w.children;
-  const opts = { duration: 430, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'forwards' };
+  const opts = { duration: 520, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'forwards' };
   la.getAnimations().forEach((an) => an.cancel());
   lb.getAnimations().forEach((an) => an.cancel());
   const p1 = la.animate([{ transform: at(x, y, 0) }, { transform: at(x, y, s) }], opts).finished;
@@ -35,10 +37,11 @@ export async function reveal() {
   const cx = window.innerWidth / 2;
   const cy = window.innerHeight / 2;
   const s = radius(cx, cy) / BASE;
-  const opts = { duration: 480, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'forwards' };
+  const opts = { duration: 560, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'forwards' };
   const p1 = lb.animate([{ transform: at(cx, cy, s) }, { transform: at(cx, cy, 0) }], opts).finished;
   const p2 = la.animate([{ transform: at(cx, cy, s) }, { transform: at(cx, cy, 0) }], { ...opts, delay: 90 }).finished;
   await Promise.all([p1, p2]).catch(() => {});
+  document.body.classList.remove('wiping');
 }
 
 export const lastOrigin = () => origin;
