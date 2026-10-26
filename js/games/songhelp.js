@@ -234,6 +234,7 @@ export function songHelper(host, life) {
   let watchOpened = false;
   let playing = false;
   let stopAt = null;
+  let pendingSeek = null;
   let raf = 0;
 
   const chunkSeg = bindSeg(root.querySelector('[data-seg="chunk"]'), {
@@ -402,6 +403,12 @@ export function songHelper(host, life) {
                 player.pauseVideo();
                 return;
               }
+              // Önce reklam çıktıysa atlama komutu kaybolur; şarkı başlayınca seçilen saniyeye gidilir
+              if (pendingSeek !== null) {
+                const want = Math.max(0, pendingSeek - 0.25);
+                if (Math.abs(player.getCurrentTime() - want) > 1.5) player.seekTo(want, true);
+                pendingSeek = null;
+              }
               setPlaying(true);
             } else if (e.data === S.PAUSED || e.data === S.ENDED) {
               setPlaying(false);
@@ -483,8 +490,11 @@ export function songHelper(host, life) {
     }
     if (mode === 'yt') {
       stopAt = to;
+      pendingSeek = from !== null ? from + (song.off || 0) : null;
       if (from !== null) player.seekTo(Math.max(0, from + (song.off || 0) - 0.25), true);
       player.playVideo();
+      // Reklam varsa şarkı başlayana dek bekleniyor görünür
+      if (!playing) root.classList.add('is-loading');
     } else if (mode === 'watch') {
       if (openWatch(from)) markChunk(from);
     } else if (mode === 'preview') {
@@ -510,6 +520,7 @@ export function songHelper(host, life) {
 
   function pause() {
     stopAt = null;
+    pendingSeek = null;
     if (mode === 'yt' && player && player.pauseVideo) player.pauseVideo();
     if (!audio.paused) audio.pause();
     setPlaying(false);
