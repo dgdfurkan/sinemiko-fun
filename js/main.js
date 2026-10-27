@@ -132,6 +132,8 @@ function parseHash() {
   const h = location.hash.replace(/^#\/?/, '');
   const m = h.match(/^oyun\/([a-z]+)$/);
   if (m && gameById(m[1])) return { key: `game:${m[1]}`, game: gameById(m[1]) };
+  // Gizli sayfa: yalnızca adres yazılarak açılır, menüde yer almaz
+  if (h === 'biz') return { key: 'secret:biz', game: null, secret: () => import('./screens/biz.js') };
   return { key: 'home', game: null };
 }
 
@@ -185,6 +187,17 @@ async function doRoute() {
     } catch (err) {
       console.error(err);
       toast('Oyun yüklenemedi. Bağlantını kontrol edip tekrar dene.', { tone: 'warn' });
+      setTheme('home');
+      history.replaceState(null, '', '#/');
+      current = { key: 'home', inst: mountHome(view, { navigate }) };
+    }
+  } else if (target.secret) {
+    try {
+      const mod = await target.secret();
+      setTheme('biz');
+      current = { key: target.key, inst: mod.mount(view, { navigate, goHome }) };
+    } catch (err) {
+      console.error(err);
       setTheme('home');
       history.replaceState(null, '', '#/');
       current = { key: 'home', inst: mountHome(view, { navigate }) };

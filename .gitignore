@@ -2,3 +2,11 @@
 .claude/
 node_modules/
 tools/.work/
+
+# Kişisel fotoğraflar repoya girmez
+/*.jpeg
+/*.jpg
+/*.png
+/*.heic
+tools/cizim/work/
+tools/cizim/.venv/
