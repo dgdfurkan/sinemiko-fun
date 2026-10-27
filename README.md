@@ -35,6 +35,10 @@ Furkan ile Sinem'in oyun gecesi için hazırlanmış, tarayıcıda çalışan ç
 | Yankı Tuzağı | Kulaklıkta kendi sesini gecikmeli duyarken metni takılmadan okumaya çalışırsın. | Mikrofon, kulaklık |
 | Balon Şişir | Tek nefeste "aaa" dedikçe balon şişer, en uzun tutan kazanır. | Mikrofon |
 
+## Açılış Filmi
+
+İlk gelişte açılış ekranı tam ekran ister; tam ekran olunca yaklaşık 46 saniyelik bir film oynar: gece, gün doğumu, oyun montajı, gün batımı ve havai fişekler, en sonda logo. Müziği ve efektleri Web Audio ile anında üretilir. Film bir kez izlenince bu tarayıcıda hatırlanır; tekrar izlemek için sağ üstteki İntro düğmesi var. Sağ altta silik bir atla düğmesi durur.
+
 ## Kısayollar
 
 - `F` tam ekran

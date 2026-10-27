@@ -2,7 +2,7 @@
 
 import { html, toHTML } from './lib/dom.js';
 import { store } from './lib/store.js';
-import { ensureAudio, setBusVolume } from './audio/engine.js';
+import { ensureAudio, setBusVolume, getCtx } from './audio/engine.js';
 import { music } from './audio/music.js';
 import { sfx } from './audio/sfx.js';
 import { stopClip } from './audio/clip.js';
@@ -25,6 +25,9 @@ let entered = false;
 let current = null;
 let pendingOrigin = null;
 let routing = Promise.resolve();
+let splashCtl = null;
+let introOn = false;
+let quietRoute = false;
 
 /* ---------- Ses düzeyleri ---------- */
 
@@ -46,6 +49,7 @@ function renderTopbar() {
       <div class="pop-count" id="pop-count" title="Patlatılan baloncuk">${bubbleIcon}<span id="pop-num">${store.get('popped')}</span></div>
       <button class="ibtn" id="btn-music" aria-label="Müzik">${icon('music')}</button>
       <button class="ibtn" id="btn-settings" aria-label="Ayarlar">${icon('sliders')}</button>
+      <button class="ibtn ibtn-intro" id="btn-intro" aria-label="İntroyu izle">${icon('film')}<span>İntro</span></button>
       <button class="ibtn" id="btn-full" aria-label="Tam ekran">${icon('full')}</button>
     </div>`);
   initScoreboard(document.getElementById('scoreboard'));
@@ -54,7 +58,19 @@ function renderTopbar() {
   document.getElementById('btn-settings').addEventListener('click', () => { sfx.click(); openSettings(); });
   const full = document.getElementById('btn-full');
   if (!canFullscreen()) full.hidden = true;
-  full.addEventListener('click', () => { sfx.click(); toggleFullscreen(); });
+  full.addEventListener('click', () => {
+    // İlk gelişte açılış ekranındayken tam ekran filmi başlatır
+    if (splashCtl && !entered) { splashCtl.go(); return; }
+    sfx.click();
+    toggleFullscreen();
+  });
+  document.getElementById('btn-intro').addEventListener('click', () => {
+    if (introOn) return;
+    ensureAudio();
+    sfx.click();
+    if (!fsElement() && canFullscreen()) enterFullscreen();
+    runIntro(false);
+  });
   syncMusicButton();
 }
 
@@ -84,6 +100,19 @@ function toggleFullscreen() {
   const p = req.call(d, { navigationUI: 'hide' });
   if (p && p.catch) p.catch(() => toast('Tarayıcı tam ekrana izin vermedi.', { tone: 'warn' }));
 }
+// Film için: izin verilmezse sessizce pencerede oynar
+function enterFullscreen() {
+  const d = document.documentElement;
+  const req = d.requestFullscreen || d.webkitRequestFullscreen;
+  if (!req) return;
+  try {
+    const p = req.call(d, { navigationUI: 'hide' });
+    if (p && p.catch) p.catch(() => {});
+  } catch {
+    // Eski tarayıcılar seçenek nesnesini kabul etmez
+  }
+}
+
 function syncFullButton() {
   const b = document.getElementById('btn-full');
   if (!b) return;
@@ -168,8 +197,13 @@ async function doRoute() {
   const g = target.game;
   const origin = pendingOrigin || { x: window.innerWidth / 2, y: window.innerHeight / 2 };
   pendingOrigin = null;
-  sfx.whoosh();
-  await cover({ ...origin, a: g ? g.color : '#ff5fa2', b: g ? g.color2 : '#ffcd3c' });
+  // Filmden siteye geçişte perde yok: film kendi sinematik geçişini yapar
+  const quiet = quietRoute;
+  quietRoute = false;
+  if (!quiet) {
+    sfx.whoosh();
+    await cover({ ...origin, a: g ? g.color : '#ff5fa2', b: g ? g.color2 : '#ffcd3c' });
+  }
 
   if (current && current.inst) {
     try { current.inst.unmount(); } catch (err) { console.error(err); }
@@ -207,6 +241,7 @@ async function doRoute() {
     current = { key: 'home', inst: mountHome(view, { navigate }) };
   }
   window.dispatchEvent(new Event('sf:scene'));
+  if (quiet) return;
   // Yeni ekranın stil, yerleşim ve çizimi perde kapalıyken biter; perde açılırken tarayıcı yalnızca perdeyle uğraşır
   await nextFrames(2);
   await reveal();
@@ -224,7 +259,10 @@ window.addEventListener('hashchange', () => route());
 window.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
   if (e.target && e.target.closest && e.target.closest('input, textarea')) return;
-  if (e.code === 'KeyF' && entered) {
+  if (e.code === 'KeyF' && !entered && splashCtl) {
+    e.preventDefault();
+    splashCtl.go();
+  } else if (e.code === 'KeyF' && entered) {
     e.preventDefault();
     toggleFullscreen();
   } else if (e.code === 'KeyM' && entered && !sheetOpen()) {
@@ -259,23 +297,81 @@ function start() {
   initLook();
   renderTopbar();
   document.body.classList.add('at-splash');
+  const firstVisit = !store.get('introSeen');
+  if (firstVisit) {
+    document.body.classList.add('intro-pending');
+    // Film dosyaları açılış ekranı dururken hazırlanır
+    import('./intro/intro.js').then((m) => m.prepareIntro()).catch(() => {});
+  }
 
-  mountSplash(view, async (btn) => {
+  splashCtl = mountSplash(view, async (btn) => {
     const ctx = ensureAudio();
+    if (ctx) applyVolumes();
+    if (firstVisit) {
+      enterFullscreen();
+      document.body.classList.remove('intro-pending');
+      const played = await runIntro(true);
+      if (played) return;
+    }
     if (ctx) {
-      applyVolumes();
       music.play('chill');
       sfx.go();
     }
     const r = btn.getBoundingClientRect();
     burst(r.left + r.width / 2, r.top + r.height / 2, { count: 70, power: 15 });
-    entered = true;
     pendingOrigin = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-    document.body.classList.remove('at-splash');
-    await route();
-    // Oyun modüllerini arka planda hazırla; ilk açılış beklemesin
-    setTimeout(() => GAMES.forEach((g) => g.load().catch(() => {})), 1200);
+    await enterSite();
+  }, { intro: firstVisit, full: canFullscreen() });
+}
+
+async function enterSite({ quiet = false } = {}) {
+  entered = true;
+  splashCtl = null;
+  document.body.classList.remove('at-splash');
+  quietRoute = quiet;
+  await route();
+  // Oyun modüllerini arka planda hazırla; ilk açılış beklemesin
+  setTimeout(() => GAMES.forEach((g) => g.load().catch(() => {})), 1200);
+}
+
+/* ---------- Açılış filmi ---------- */
+
+// İlk gelişte bir kez, sonra sağ üstteki düğmeyle. Film oynarken arkadaki site gizlenir, müzik susar.
+async function runIntro(first) {
+  if (introOn) return true;
+  introOn = true;
+  let mod;
+  try {
+    mod = await import('./intro/intro.js');
+    await mod.prepareIntro();
+  } catch (err) {
+    console.error(err);
+    introOn = false;
+    return false;
+  }
+  const prevSong = music.current();
+  music.stop();
+  stopClip();
+  // Önce ekran kararır; film o karanlıkta kurulur, kurulum anı hiç görünmez
+  const curtain = document.createElement('div');
+  curtain.className = 'intro-curtain';
+  document.body.append(curtain);
+  await curtain.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, easing: 'ease-in', fill: 'forwards' }).finished.catch(() => {});
+  document.body.classList.add('intro-on', 'intro-fx');
+  setTimeout(() => curtain.remove(), 400);
+  mod.playIntro({
+    onHandoff: () => {
+      store.set('introSeen', true);
+      document.body.classList.remove('intro-on');
+      if (first) enterSite({ quiet: true });
+      if (getCtx()) music.play(first ? 'chill' : prevSong || 'chill');
+    },
+    onEnd: () => {
+      document.body.classList.remove('intro-fx');
+      introOn = false;
+    },
   });
+  return true;
 }
 
 start();

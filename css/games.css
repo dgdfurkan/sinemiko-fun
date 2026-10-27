@@ -42,6 +42,7 @@
 .splash-go { font-size: clamp(24px, min(2.6vw, 4.4vh), 44px); }
 .splash-hint { margin: 0; display: flex; align-items: center; gap: 10px; font: 600 15px var(--body); color: var(--ink-2); }
 .splash-hint .key { font-size: 14px; margin-left: 8px; }
+.splash-hint--intro { max-width: 34em; display: block; text-align: center; line-height: 1.4; font-size: 16px; }
 
 /* ---------- Ana menü ---------- */
 .home {

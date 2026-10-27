@@ -282,6 +282,20 @@ body.at-home .brand-mini, body.at-splash .brand-mini { opacity: 0; transform: tr
 body.at-splash .tb-right, body.at-splash .scoreboard { opacity: 0; pointer-events: none; }
 .tb-right { transition: opacity .4s; }
 
+/* İntro düğmesi yazılı durur; ilk gelişte açılış ekranında yalnızca tam ekran düğmesi görünür ve nabız atar */
+.ibtn-intro { width: auto; display: inline-flex; align-items: center; gap: 7px; padding: 0 13px 0 10px; font: 400 clamp(15px, 1.1vw, 19px)/1 var(--display); color: var(--ink); }
+.ibtn-intro svg { width: 1.25em; height: 1.25em; }
+body.at-splash.intro-pending .tb-right { opacity: 1; pointer-events: auto; }
+body.at-splash.intro-pending .tb-right > :not(#btn-full) { visibility: hidden; }
+body.at-splash.intro-pending #btn-full { position: relative; background: var(--sun); }
+body.at-splash.intro-pending #btn-full::after {
+  content: ''; position: absolute; inset: -7px;
+  border: 4px solid var(--sun); border-radius: 21px;
+  pointer-events: none;
+  animation: fullPulse 1.3s ease-out infinite;
+}
+@keyframes fullPulse { 0% { opacity: .95; transform: scale(1); } 100% { opacity: 0; transform: scale(1.35); } }
+
 .pop-count {
   display: inline-flex; align-items: center; gap: 6px;
   height: clamp(42px, 3.2vw, 52px); padding: 0 14px 0 8px;
@@ -384,10 +398,13 @@ body.at-splash .tb-right, body.at-splash .scoreboard { opacity: 0; pointer-event
 }
 
 @media (max-width: 720px) {
+  .ibtn-intro span { display: none; }
+  .ibtn-intro { width: clamp(42px, 3.2vw, 52px); padding: 0; justify-content: center; }
   .topbar { grid-template-columns: auto 1fr auto; gap: 6px; padding-left: 10px; padding-right: 10px; }
   .tb-left, .tb-right { gap: 6px; }
   .ibtn { width: 38px; height: 38px; border-radius: 12px; }
   #btn-full { display: none; }
+  .sh-corner { display: none; }
   .scoreboard { gap: 4px; justify-self: center; }
   .scoreboard.hidden { display: none; }
   .sb-name { display: none; }

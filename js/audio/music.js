@@ -378,6 +378,9 @@ function tick() {
 }
 
 export const music = {
+  current() {
+    return song ? song.name : null;
+  },
   play(name = 'chill') {
     const ctx = ensureAudio();
     if (!ctx) return;
