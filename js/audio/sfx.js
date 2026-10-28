@@ -90,6 +90,11 @@ export const sfx = {
     o.frequency.linearRampToValueAtTime(240, t + 0.2);
     o.frequency.linearRampToValueAtTime(330, t + 0.3);
   },
+  // Hedefe yaklaştıkça incelen kısa ses; level 0-1
+  warm(level = 0.5) {
+    const c = live(); if (!c) return;
+    tone(c, { type: 'sine', f: 480 + level * 760, f2: 520 + level * 820, dur: 0.07, vol: 0.055 });
+  },
   tick(n = 1) {
     const c = live(); if (!c) return;
     tone(c, { type: 'triangle', f: 900 + n * 60, dur: 0.06, vol: 0.13 });

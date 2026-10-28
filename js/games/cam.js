@@ -112,6 +112,7 @@ export function camController(shell, life) {
     root.style.setProperty('--ar', ar.toFixed(4));
     root.classList.add('cam-on');
     cam.on = true;
+    cam.kind = kind;
     resize();
     dimSync();
     cam.tracker = new Tracker({
@@ -134,6 +135,8 @@ export function camController(shell, life) {
     dimSync();
     lastT = performance.now();
     raf = requestAnimationFrame(loop);
+    // Testler kamera durumunu buradan okur
+    if (window.__sinemikoCamHook) window.__sinemikoCamHook(cam);
     return true;
   };
 
@@ -287,6 +290,17 @@ export function waitPlayers(stage, life, cam, { title = 'Kadraja Geçin', tip = 
   const btn = scene.querySelector('[data-act="ready"]');
   const badges = [...scene.querySelectorAll('[data-b]')];
   const shown = [null, null];
+  const said = [null, null];
+  // Vücut oyunlarında mesafe önerisi: omuz genişliği kadrajın yüksekliğine göre ölçülür
+  const fit = (i) => {
+    const p = cam.players[i];
+    if (cam.kind !== 'pose' || !p) return 'Hazır';
+    const lm = p.lm;
+    const sw = Math.hypot((lm[11].x - lm[12].x) * p.ar, lm[11].y - lm[12].y);
+    if (sw > 0.36 || lm[0].y < 0.1) return 'Bir adım geri';
+    if (sw < 0.09) return 'Biraz yaklaş';
+    return 'Hazır';
+  };
   let since = 0;
   let gone = false;
   const go = () => {
@@ -300,10 +314,15 @@ export function waitPlayers(stage, life, cam, { title = 'Kadraja Geçin', tip = 
     if (stage.scene !== scene || gone) return;
     const ok = [0, 1].map((i) => cam.visible(i));
     badges.forEach((b, i) => {
+      const text = ok[i] ? fit(i) : 'Görünmüyor';
+      if (said[i] !== text) {
+        said[i] = text;
+        b.querySelector('b').textContent = text;
+        b.classList.toggle('warn', ok[i] && text !== 'Hazır');
+      }
       if (shown[i] === ok[i]) return;
       shown[i] = ok[i];
       b.classList.toggle('on', ok[i]);
-      b.querySelector('b').textContent = ok[i] ? 'Hazır' : 'Görünmüyor';
       if (ok[i]) sfx.pop();
     });
     const both = ok[0] && ok[1];
@@ -377,11 +396,10 @@ export function drawFaceFrame(g, cam, p, i, { label = nameOf(i), glow = 0, color
   const k = Math.min(w, h) * 0.28;
   g.lineCap = 'round';
   g.lineJoin = 'round';
-  if (glow) {
-    g.shadowColor = color;
-    g.shadowBlur = 34 * glow;
-  }
-  for (const [lw, col] of [[11, '#2a1636'], [6, color]]) {
+  const layers = [[11, '#2a1636'], [6, color]];
+  if (glow) layers.unshift([11 + 24 * glow, color, 0.3 * glow]);
+  for (const [lw, col, a = 1] of layers) {
+    g.globalAlpha = a;
     g.lineWidth = lw;
     g.strokeStyle = col;
     g.beginPath();
@@ -391,7 +409,7 @@ export function drawFaceFrame(g, cam, p, i, { label = nameOf(i), glow = 0, color
     g.moveTo(x + k, y + h); g.lineTo(x, y + h); g.lineTo(x, y + h - k);
     g.stroke();
   }
-  g.shadowBlur = 0;
+  g.globalAlpha = 1;
   if (label) tag(g, x + w / 2, Math.max(18, y - 22), label, color);
 }
 
@@ -445,38 +463,102 @@ export function ring(g, x, y, r, value, color) {
   }
 }
 
-const BONES = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24]];
+// Kol rehberi renkleri: tuttu yeşil, yaklaştı sarı, olmadı gri (iki oyuncunun renginden de ayrı)
+export const limbColor = (s) => (s < 0 ? null : s >= 0.72 ? '#2ed6a0' : s >= 0.45 ? '#ffcd3c' : '#a99cb3');
 
-// Sevimli iskelet: kalın kontur, oyuncu renginde kemikler, ellerde beyaz top
-export function drawSkeleton(g, cam, p, i, { glow = 0, label = nameOf(i), color = PCOL[i], alpha = 1 } = {}) {
+const BONES = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24]];
+// Kopya Kedi kol renkleri için: kemik → kol parçası (sol üst kol, sol ön kol, sağ üst kol, sağ ön kol)
+const BONE_LIMB = [-1, 0, 1, 2, 3, -1, -1, -1];
+// Kemik, kadrajın biraz dışına taşan uçlarıyla da çizilir; kalkan kol ekranın kenarında kopmasın
+const usable = (q) => q.v >= 0.4 || (q.v >= 0.08 && (q.x < 0 || q.x > 1 || q.y < 0 || q.y > 1));
+
+// Ellerden kısa bir ışık izi: her oyuncunun son konumları
+const trails = new WeakMap();
+function handTrail(g, cam, i, lm, P, thick, color, t) {
+  let tr = trails.get(cam);
+  if (!tr) {
+    tr = [[], []];
+    trails.set(cam, tr);
+  }
+  const list = tr[i];
+  for (const k of [15, 16]) {
+    if (lm[k].v < 0.4) continue;
+    const [x, y] = P(k);
+    const lastPt = list.length ? list[list.length - 1] : null;
+    if (!lastPt || lastPt.k !== k || Math.hypot(lastPt.x - x, lastPt.y - y) > 2) list.push({ x, y, t, k });
+  }
+  while (list.length && t - list[0].t > 260) list.shift();
+  if (list.length > 40) list.splice(0, list.length - 40);
+  for (const q of list) {
+    const life = 1 - (t - q.t) / 260;
+    if (life <= 0) continue;
+    g.globalAlpha = life * 0.55;
+    g.beginPath();
+    g.arc(q.x, q.y, thick * (0.35 + life * 0.55), 0, Math.PI * 2);
+    g.fillStyle = color;
+    g.fill();
+  }
+  g.globalAlpha = 1;
+}
+
+// Sevimli iskelet: kalın kontur, oyuncu renginde kemikler, ellerde beyaz top.
+// limbs: kol parçalarının renkleri (Kopya Kedi). Parlama gölge bulanıklığı yerine geniş yarı saydam çizgiyle: çok daha ucuz
+export function drawSkeleton(g, cam, p, i, { glow = 0, label = nameOf(i), color = PCOL[i], alpha = 1, limbs = null, trail = true } = {}) {
   const lm = p.lm;
   const P = (k) => [lm[k].x * cam.W, lm[k].y * cam.H];
   const sw = Math.hypot((lm[11].x - lm[12].x) * cam.W, (lm[11].y - lm[12].y) * cam.H);
   const thick = Math.max(6, Math.min(16, sw * 0.09));
+  const t = performance.now();
   g.save();
   g.globalAlpha = alpha;
   g.lineCap = 'round';
   g.lineJoin = 'round';
-  if (glow) {
-    g.shadowColor = color;
-    g.shadowBlur = 30 * glow;
-  }
-  for (const [lw, col] of [[thick + 7, '#2a1636'], [thick, color]]) {
-    g.lineWidth = lw;
-    g.strokeStyle = col;
+  if (trail && alpha > 0.6) handTrail(g, cam, i, lm, P, thick, color, t);
+  g.globalAlpha = alpha;
+  const bones = BONES.filter(([a, b]) => usable(lm[a]) && usable(lm[b]));
+  const path = (list) => {
     g.beginPath();
-    for (const [a, b] of BONES) {
-      if (lm[a].v < 0.4 || lm[b].v < 0.4) continue;
+    for (const [a, b] of list) {
       const [x1, y1] = P(a);
       const [x2, y2] = P(b);
       g.moveTo(x1, y1);
       g.lineTo(x2, y2);
     }
+  };
+  if (glow) {
+    path(bones);
+    g.globalAlpha = alpha * 0.28 * glow;
+    g.lineWidth = thick + 26 * glow;
+    g.strokeStyle = color;
+    g.stroke();
+    g.globalAlpha = alpha;
+  }
+  path(bones);
+  g.lineWidth = thick + 7;
+  g.strokeStyle = '#2a1636';
+  g.stroke();
+  if (limbs) {
+    // Renkli kol parçaları tek tek, geri kalan kemikler oyuncu renginde
+    const groups = new Map();
+    bones.forEach((bn) => {
+      const li = BONE_LIMB[BONES.indexOf(bn)];
+      const col = (li >= 0 && limbs[li]) || color;
+      if (!groups.has(col)) groups.set(col, []);
+      groups.get(col).push(bn);
+    });
+    g.lineWidth = thick;
+    for (const [col, list] of groups) {
+      path(list);
+      g.strokeStyle = col;
+      g.stroke();
+    }
+  } else {
+    g.lineWidth = thick;
+    g.strokeStyle = color;
     g.stroke();
   }
-  g.shadowBlur = 0;
   for (const k of [15, 16]) {
-    if (lm[k].v < 0.4) continue;
+    if (!usable(lm[k])) continue;
     const [x, y] = P(k);
     g.beginPath();
     g.arc(x, y, thick * 0.95, 0, Math.PI * 2);

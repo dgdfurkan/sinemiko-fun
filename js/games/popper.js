@@ -53,18 +53,24 @@ export function mount(view, { game, navigate }) {
     cam.draw = (gx, players) => players.forEach((p, i) => { if (p) drawSkeleton(gx, cam, p, i); });
     waitPlayers(stage, life, cam, {
       title: 'Elleri Hazırlayın',
-      tip: 'Kollarınızı açınca ekrana sığacak kadar geri çekilin.',
+      tip: 'Belinizden yukarısı görünsün. El kadrajdan biraz taşarsa da sorun değil.',
       onReady: () => play(),
     });
   }
 
-  // Elin ucu: bilekten dirsek yönünde biraz ileri; avuç içinin ortasına denk gelir
+  // Avucun ortası: bilek, işaret ve serçe parmak kökünün ortası. Parmaklar görünmezse bilekten dirsek yönünde biraz ileri
   function handsOf(p) {
     const out = [];
-    for (const [w, e] of [[15, 13], [16, 14]]) {
+    for (const [w, e, pinky, index] of [[15, 13, 17, 19], [16, 14, 18, 20]]) {
       const a = p.lm[w];
       const b = p.lm[e];
       if (a.v < 0.35) continue;
+      const f1 = p.lm[pinky];
+      const f2 = p.lm[index];
+      if (f1.v > 0.35 && f2.v > 0.35) {
+        out.push([((a.x + f1.x + f2.x) / 3) * cam.W, ((a.y + f1.y + f2.y) / 3) * cam.H]);
+        continue;
+      }
       const k = b.v > 0.3 ? 0.3 : 0;
       out.push([(a.x + (a.x - b.x) * k) * cam.W, (a.y + (a.y - b.y) * k) * cam.H]);
     }

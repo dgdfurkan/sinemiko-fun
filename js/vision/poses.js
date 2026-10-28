@@ -2,14 +2,17 @@
 // Koordinatlar aynalı ekran düzlemindedir; kişinin sol omzu (11) ekranın solunda görünür.
 
 const VIS = 0.5;
-const LIMB = 0.3;
+const LIMB = 0.35;
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const inFrame = (p) => p.x > -0.02 && p.x < 1.02 && p.y > -0.02 && p.y < 1.02;
 
-// x en boy oranıyla çarpılır, böylece x ve y aynı ölçekte olur
+// x en boy oranıyla çarpılır, böylece x ve y aynı ölçekte olur.
+// Kadrajdan taşan dirsek ya da bilek kullanılmaya devam eder: model onun yerini tahmin eder ve
+// "eller havada" gibi pozlarda el ekranın üstünden çıksa bile kol yukarıda sayılır.
 export function body(lm, ar = 16 / 9) {
   if (!lm || lm.length < 25) return null;
-  const P = (k) => ({ x: lm[k].x * ar, y: lm[k].y, v: lm[k].v });
+  const P = (k) => ({ x: lm[k].x * ar, y: lm[k].y, v: lm[k].v, out: !inFrame(lm[k]) });
   const b = { n: P(0), ls: P(11), rs: P(12), le: P(13), re: P(14), lw: P(15), rw: P(16), m1: P(9), m2: P(10) };
   if (b.n.v < VIS || b.ls.v < VIS || b.rs.v < VIS) return null;
   b.sw = dist(b.ls, b.rs);
@@ -17,8 +20,32 @@ export function body(lm, ar = 16 / 9) {
   b.mo = { x: (b.m1.x + b.m2.x) / 2, y: (b.m1.y + b.m2.y) / 2 };
   b.mx = (b.ls.x + b.rs.x) / 2;
   b.my = (b.ls.y + b.rs.y) / 2;
-  b.arms = [b.le, b.lw, b.re, b.rw].every((p) => p.v > LIMB);
+  const okE = (e) => e.v > LIMB || e.out;
+  const okW = (w, e) => w.v > LIMB || (w.out && okE(e));
+  b.armL = okE(b.le) && okW(b.lw, b.le);
+  b.armR = okE(b.re) && okW(b.rw, b.re);
+  b.arms = b.armL && b.armR;
   return b;
+}
+
+// Kol yukarıda: bilek omzun ve başın belirgin üstünde, ya da bilek kadrajın üstünden çıkmış,
+// ya da bilek görünmüyor ama dirsek omzun üstünde
+function armUp(b, s, e, w) {
+  if (w.v > LIMB || w.out) {
+    if (w.out && w.y < 0.03 && e.y < s.y) return true;
+    if (w.y < s.y - 0.6 * b.sw && w.y < b.n.y - 0.15 * b.sw) return true;
+  }
+  return (e.v > LIMB || e.out) && e.y < s.y - 0.3 * b.sw && !(w.v > LIMB && !w.out && w.y > e.y);
+}
+// Kol aşağıda; görünmeyen kol aşağıda sayılır, yoksa kenarda duran kişi hiç kazanamaz
+const armDown = (b, s, e, w) => !(w.v > LIMB) || w.y > s.y + 0.15 * b.sw;
+// Kol yana açık: dirsek omuz hizasında ve dışarıda; bilek görünüyorsa o da dışarıda ve aşağı yukarı aynı hizada
+function armOut(b, s, e, w, dir) {
+  if (!(e.v > LIMB || e.out)) return false;
+  const elbow = (e.x - s.x) * dir > 0.42 * b.sw && Math.abs(e.y - s.y) < 0.5 * b.sw;
+  if (!elbow) return false;
+  if (!(w.v > LIMB) || w.out) return true;
+  return (w.x - s.x) * dir > 0.85 * b.sw && Math.abs(w.y - s.y) < 0.6 * b.sw;
 }
 
 /* ---------- Kart çizimleri ---------- */
@@ -52,24 +79,25 @@ const dabR = (b) => b.rw.x > b.rs.x + 0.7 * b.sw && b.rw.y < b.rs.y - 0.2 * b.sw
 export const POSES = [
   {
     id: 'up', name: 'Eller Havaya', fig: fig({ le: [31, 27], lw: [33, 7], re: [69, 27], rw: [67, 7] }),
-    test: (b) => b.arms && b.lw.y < b.ls.y - 0.6 * b.sw && b.rw.y < b.rs.y - 0.6 * b.sw && Math.max(b.lw.y, b.rw.y) < b.n.y - 0.25 * b.sw,
+    test: (b) => armUp(b, b.ls, b.le, b.lw) && armUp(b, b.rs, b.re, b.rw),
   },
   {
     id: 'y', name: 'Y Harfi', fig: fig({ le: [25, 31], lw: [14, 15], re: [75, 31], rw: [86, 15] }),
-    test: (b) => b.arms && b.lw.y < b.ls.y - 0.8 * b.sw && b.rw.y < b.rs.y - 0.8 * b.sw && b.lw.x < b.ls.x - 0.6 * b.sw && b.rw.x > b.rs.x + 0.6 * b.sw,
+    // Yukarı ve dışarı: bilek görünüyorsa omzun dışında, görünmüyorsa dirsek dışarı açık
+    test: (b) => [[b.ls, b.le, b.lw, -1], [b.rs, b.re, b.rw, 1]].every(([s, e, w, d]) => armUp(b, s, e, w)
+      && ((w.v > LIMB || w.out) ? (w.x - s.x) * d > 0.5 * b.sw : (e.x - s.x) * d > 0.3 * b.sw)),
   },
   {
     id: 't', name: 'T Pozu', fig: fig({ le: [21, 44], lw: [6, 44], re: [79, 44], rw: [94, 44] }),
-    test: (b) => b.arms && b.lw.x < b.ls.x - 0.9 * b.sw && b.rw.x > b.rs.x + 0.9 * b.sw
-      && Math.abs(b.lw.y - b.ls.y) < 0.5 * b.sw && Math.abs(b.rw.y - b.rs.y) < 0.5 * b.sw,
+    test: (b) => armOut(b, b.ls, b.le, b.lw, -1) && armOut(b, b.rs, b.re, b.rw, 1),
   },
   {
     id: 'left', name: 'Sol El Havada', fig: LEFT_UP,
-    test: (b) => b.arms && b.lw.y < b.n.y - 0.1 * b.sw && b.rw.y > b.rs.y + 0.2 * b.sw,
+    test: (b) => armUp(b, b.ls, b.le, b.lw) && armDown(b, b.rs, b.re, b.rw),
   },
   {
     id: 'right', name: 'Sağ El Havada', fig: mirrorFig(LEFT_UP),
-    test: (b) => b.arms && b.rw.y < b.n.y - 0.1 * b.sw && b.lw.y > b.ls.y + 0.2 * b.sw,
+    test: (b) => armUp(b, b.rs, b.re, b.rw) && armDown(b, b.ls, b.le, b.lw),
   },
   {
     id: 'head', name: 'Eller Başa', fig: fig({ le: [22, 30], lw: [42, 9], re: [78, 30], rw: [58, 9] }),
@@ -80,7 +108,7 @@ export const POSES = [
   },
   {
     id: 'heart', name: 'Başının Üstünde Kalp', fig: fig({ le: [24, 22], lw: [47, 3], re: [76, 22], rw: [53, 3] }),
-    test: (b) => b.arms && dist(b.lw, b.rw) < 0.55 * b.sw && Math.max(b.lw.y, b.rw.y) < b.n.y - 0.4 * b.sw && b.le.x < b.ls.x && b.re.x > b.rs.x,
+    test: (b) => b.arms && dist(b.lw, b.rw) < 0.6 * b.sw && Math.max(b.lw.y, b.rw.y) < b.n.y - 0.35 * b.sw && b.le.x < b.ls.x && b.re.x > b.rs.x,
   },
   {
     id: 'cross', name: 'Kollar Çapraz', fig: fig({ le: [37, 66], lw: [61, 52], re: [63, 66], rw: [39, 52] }),
@@ -113,14 +141,13 @@ export const POSES = [
   },
   {
     id: 'point', name: 'Partnerini Göster', fig: fig({ re: [78, 43], rw: [94, 41] }),
+    // Partnere doğru uzanan kol; yan yana dururken el partnerin üstüne binse de dirsek yönü yeter
     test: (b, side) => {
-      if (!b.arms) return false;
-      const near = side > 0 ? b.rs : b.ls;
-      const far = side > 0 ? b.ls : b.rs;
-      const out = (w) => (w.x - near.x) * side > 0.9 * b.sw && Math.abs(w.y - b.ls.y) < 0.7 * b.sw;
+      const reach = (s, e, w) => armOut(b, s, e, w, side) || ((e.v > LIMB || e.out) && (w.v > LIMB || w.out)
+        && (w.x - s.x) * side > 0.75 * b.sw && Math.abs(w.y - s.y) < 0.8 * b.sw);
       // T pozunu saymasın: öbür kol karşı tarafa açılmamalı
-      const open = (w) => (w.x - far.x) * -side > 0.5 * b.sw;
-      return (out(b.lw) && !open(b.rw)) || (out(b.rw) && !open(b.lw));
+      const open = (s, w) => w.v > LIMB && (w.x - s.x) * -side > 0.6 * b.sw;
+      return (reach(b.ls, b.le, b.lw) && !open(b.rs, b.rw)) || (reach(b.rs, b.re, b.rw) && !open(b.ls, b.lw));
     },
   },
   {
@@ -161,32 +188,63 @@ const angDiff = (a, b) => {
   const d = Math.abs(a - b) % (Math.PI * 2);
   return d > Math.PI ? Math.PI * 2 - d : d;
 };
+const DEG = Math.PI / 180;
 
 // Kolların ve gövdenin açıları; boydan ve kameraya uzaklıktan bağımsız
 export function poseVec(b) {
+  const okE = (e) => e.v > LIMB || e.out;
+  const okW = (w, e) => (w.v > LIMB || w.out) && okE(e);
   return {
     a: [ang(b.ls, b.le), ang(b.le, b.lw), ang(b.rs, b.re), ang(b.re, b.rw)],
-    vis: [b.le.v > LIMB, b.le.v > LIMB && b.lw.v > LIMB, b.re.v > LIMB, b.re.v > LIMB && b.rw.v > LIMB],
+    vis: [okE(b.le), okW(b.lw, b.le), okE(b.re), okW(b.rw, b.re)],
     len: [dist(b.ls, b.le) / b.sw, dist(b.le, b.lw) / b.sw, dist(b.rs, b.re) / b.sw, dist(b.re, b.rw) / b.sw],
     tilt: ang(b.ls, b.rs),
     head: { x: (b.n.x - b.mx) / b.sw, y: (b.n.y - b.my) / b.sw },
   };
 }
 
-// 0 ile 1 arası; 30 derecelik ortalama sapma yaklaşık 0,8 verir
-export function similarity(t, c) {
-  const near = (d, span) => Math.max(0, 1 - (d / span) ** 1.5);
-  const deg = Math.PI / 180;
+// Karttaki çöp adamın açıları: Poz Ver! oyununda hangi kolun doğru olduğunu canlı göstermek için
+export function figVec(fig) {
+  const P = (k) => ({ x: fig[k][0], y: fig[k][1], v: 1, out: false });
+  const b = { n: P('n'), ls: P('ls'), rs: P('rs'), le: P('le'), re: P('re'), lw: P('lw'), rw: P('rw') };
+  b.sw = dist(b.ls, b.rs);
+  b.mx = (b.ls.x + b.rs.x) / 2;
+  b.my = (b.ls.y + b.rs.y) / 2;
+  return poseVec(b);
+}
+
+// Sıradan duruş: gövde dik ve dört kol parçası da aşağı sarkıyor. Böyle bir poz kopyalanmaz, tekrar istenir
+export function ordinary(vec) {
+  if (angDiff(vec.tilt, 0) > 14 * DEG) return false;
+  const down = vec.a.map((a, k) => (vec.vis[k] ? Math.max(0, 1 - angDiff(a, Math.PI / 2) / (40 * DEG)) : 1));
+  return down.reduce((s, x) => s + x, 0) / 4 > 0.55;
+}
+
+// Her kol parçası için 0-1 arası uyum ve toplam puan. Ortalama ile en kötü parça birlikte sayılır:
+// tek kolu yanlış olan kopya geçmez. Gövde eğimi çok farklıysa puan düşer.
+export function compare(t, c) {
+  const near = (d) => Math.max(0, 1 - (d / (62 * DEG)) ** 1.6);
+  const W = [1.2, 1, 1.2, 1];
+  const limbs = [0, 0, 0, 0];
   let sum = 0;
   let w = 0;
+  let worst = 1;
   for (let k = 0; k < 4; k++) {
-    if (!t.vis[k]) continue;
-    sum += c.vis[k] ? near(angDiff(t.a[k], c.a[k]), 100 * deg) : 0;
-    w += 1;
+    if (!t.vis[k]) {
+      limbs[k] = -1;
+      continue;
+    }
+    const s = c.vis[k] ? near(angDiff(t.a[k], c.a[k])) : 0;
+    limbs[k] = s;
+    sum += s * W[k];
+    w += W[k];
+    worst = Math.min(worst, s);
   }
-  sum += 0.6 * near(angDiff(t.tilt, c.tilt), 40 * deg);
-  w += 0.6;
-  sum += 0.4 * near(Math.hypot(t.head.x - c.head.x, t.head.y - c.head.y), 0.6);
-  w += 0.4;
-  return sum / w;
+  if (!w) return { score: 0, limbs };
+  let score = 0.55 * (sum / w) + 0.45 * worst;
+  const tilt = angDiff(t.tilt, c.tilt);
+  if (tilt > 18 * DEG) score *= Math.max(0.55, 1 - (tilt - 18 * DEG) / (60 * DEG));
+  return { score, limbs };
 }
+
+export const similarity = (t, c) => compare(t, c).score;

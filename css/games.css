@@ -1140,6 +1140,9 @@ button.qz-opt[disabled] { opacity: .55; cursor: default; }
 .cbd-dot { width: 14px; height: 14px; border-radius: 50%; background: #e6dcd0; border: 2.5px solid var(--ink); transition: background-color .3s; }
 .cam-badge.on { transform: scale(1.07); }
 .cam-badge.on b { color: var(--ink); }
+.cam-badge.warn b { color: #d6331f; }
+.cam-badge.warn { animation: badgeNudge 1.2s ease-in-out infinite; }
+@keyframes badgeNudge { 0%, 100% { translate: 0 0; } 50% { translate: 0 -3px; } }
 .cam-badge.p0.on { background: #d6eeff; }
 .cam-badge.p1.on { background: #ffe0ee; }
 .cam-badge.p0.on .cbd-dot { background: var(--p1); }

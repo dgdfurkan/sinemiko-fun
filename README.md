@@ -61,7 +61,7 @@ Sonra tarayıcıda `http://localhost:5177` adresini aç.
 - Müzik ve ses efektleri Web Audio ile anında üretilir, ses dosyası yoktur.
 - Kayıtlar yalnızca tarayıcıda kalır, hiçbir sunucuya gönderilmez. Reverse Play'de turu WAV olarak indirebilirsin.
 - Kamera oyunları yüz ve vücut takibi için MediaPipe kullanır. Model ilk açılışta indirilir, görüntü tarayıcıda işlenir ve hiçbir yere gönderilmez. Kamera yalnızca oyun ekranı açıkken çalışır.
-- Kamera oyunlarında oyuncular solda ve sağda durarak ayırt edilir.
+- Kamera oyunlarında oyuncular solda ve sağda durarak ayırt edilir. Takip ayrı bir iş parçacığında çalışır; yan yana duran iki kişi tek kişi sanılmasın diye kare aralarındaki boşluktan ikiye bölünür ve her yarıda bir kişi aranır. Kadrajdan taşan el de hesaba katılır.
 - Kamera oyunlarının sunucu sesi Gemini TTS ile önceden seslendirildi (`audio/voice/`). Metinler ve sahne tarifi `tools/voice-lines.json` içinde; yeniden üretmek için `python3 tools/seslendir.py`. Ayarlar'dan Sesli Sunucu kapatılabilir.
 - Mırıldan Bakalım'da şarkının tam hali YouTube oynatıcısıyla çalar. Listedeki her şarkı için sitelere gömülebilen ve süresi zamanlı sözlerle tutan kayıtlar seçildi; açılmazsa Apple'ın 30 saniyelik önizlemesine geçer. Sözler LRCLIB'den (yoksa lyrics.ovh) oyun sırasında çekilir; depoda şarkı ya da söz saklanmaz.
 - Aynı şarkı paneli Emoji Avı'nın şarkı bulmacalarında ve Reverse Play'in Şarkılar turlarında da cevap açılınca çıkar.

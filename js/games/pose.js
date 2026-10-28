@@ -10,9 +10,9 @@ import { countdown } from '../ui/countdown.js';
 import { sfx } from '../audio/sfx.js';
 import { burst } from '../fx/confetti.js';
 import { lobbyHTML, optHTML, celebrate, versusFinaleHTML } from './common.js';
-import { camShell, camController, camBoot, waitPlayers, missingText, drawSkeleton, ring, tag, PCOL, albumStripHTML, downloadAlbum } from './cam.js';
+import { camShell, camController, camBoot, waitPlayers, missingText, drawSkeleton, ring, tag, PCOL, albumStripHTML, downloadAlbum, limbColor } from './cam.js';
 import { announcer } from '../audio/announcer.js';
-import { POSES, body, figSVG } from '../vision/poses.js';
+import { POSES, body, figSVG, figVec, poseVec, compare } from '../vision/poses.js';
 
 const HOLD = 0.5;
 const TRAP_SEC = 3.6;
@@ -58,7 +58,7 @@ export function mount(view, { game, navigate }) {
     cam.draw = (gx, players) => players.forEach((p, i) => { if (p) drawSkeleton(gx, cam, p, i); });
     waitPlayers(stage, life, cam, {
       title: 'Yan Yana Geçin',
-      tip: 'Kollarınızı açınca ekrana sığacak kadar geri çekilin.',
+      tip: 'Belinizden yukarısı görünsün. El kadrajdan biraz taşarsa da sorun değil.',
       onReady: () => play(),
     });
   }
@@ -98,6 +98,7 @@ export function mount(view, { game, navigate }) {
   function round(pose, trap) {
     return new Promise((resolve) => {
       const simon = cfg.mode === 'sinemiko';
+      const guide = trap || pose.id === 'point' ? null : figVec(pose.fig);
       const windowSec = trap ? TRAP_SEC : Math.max(3.4, 6 - g.round * 0.2);
       const st = [0, 1].map(() => ({ hold: 0, done: false, pts: 0, label: '', t: 0 }));
       let started = 0;
@@ -194,6 +195,8 @@ export function mount(view, { game, navigate }) {
           const p = players[i];
           const b = p && body(p.lm, p.ar);
           const ok = !!b && pose.test(b, cam.sideOf(i));
+          // Kol rehberi: tuzak kartta ve yöne bağlı pozda gösterilmez
+          s.limbs = guide && b ? compare(guide, poseVec(b)).limbs : null;
           s.hold = ok ? s.hold + dt : Math.max(0, s.hold - dt * 1.5);
           if (s.hold >= HOLD) fresh.push(i);
         });
@@ -216,7 +219,7 @@ export function mount(view, { game, navigate }) {
           const s = st[i];
           const lm = p.lm;
           const glow = s.done && s.pts > 0 ? 1 : 0;
-          drawSkeleton(gx, cam, p, i, { label: '', glow, color: s.done && s.pts < 0 ? '#ff4f62' : PCOL[i] });
+          drawSkeleton(gx, cam, p, i, { label: '', glow, color: s.done && s.pts < 0 ? '#ff4f62' : PCOL[i], limbs: !s.done && s.limbs ? s.limbs.map(limbColor) : null });
           if (lm[0].v < 0.4) return;
           const x = lm[0].x * cam.W;
           const y = lm[0].y * cam.H;
@@ -224,7 +227,9 @@ export function mount(view, { game, navigate }) {
           const r = Math.max(26, sw * 0.42);
           if (!s.done) ring(gx, x, y, r, s.hold / HOLD, PCOL[i]);
           const pop = s.done ? 1 + Math.max(0, 0.35 - (t - s.t) / 1000) : 1;
-          const text = s.done ? `${s.label}${s.pts ? ` ${s.pts > 0 ? '+' : ''}${s.pts}` : ''}` : (ended ? s.label : nameOf(i));
+          // Kollardan üçü tutuyorsa cesaret verir
+          const near = !s.done && !ended && s.limbs && s.limbs.filter((v) => v >= 0.72).length >= 3;
+          const text = s.done ? `${s.label}${s.pts ? ` ${s.pts > 0 ? '+' : ''}${s.pts}` : ''}` : (ended ? s.label : near ? 'Az kaldı!' : nameOf(i));
           tag(gx, x, Math.max(24, y - r - 28), text, s.done ? (s.pts > 0 ? PCOL[i] : '#ff4f62') : PCOL[i], 18 * pop);
         });
       };

@@ -10,13 +10,28 @@ import { countdown } from '../ui/countdown.js';
 import { sfx } from '../audio/sfx.js';
 import { burst } from '../fx/confetti.js';
 import { lobbyHTML, optHTML, celebrate, versusFinaleHTML, coinFlip, FIRST_OPTIONS, pSpan } from './common.js';
-import { camShell, camController, camBoot, waitPlayers, missingText, drawSkeleton, tag, PCOL, albumStripHTML, downloadAlbum } from './cam.js';
+import { camShell, camController, camBoot, waitPlayers, missingText, drawSkeleton, tag, PCOL, albumStripHTML, downloadAlbum, limbColor } from './cam.js';
 import { announcer } from '../audio/announcer.js';
-import { body, poseVec, similarity } from '../vision/poses.js';
+import { body, poseVec, compare, ordinary } from '../vision/poses.js';
 
-const COPY_SEC = 7;
-const GOAL = 0.8;
-const HOLD = 0.45;
+const COPY_SEC = 8;
+const GOAL = 0.72;
+const HOLD = 0.5;
+const PERFECT = 0.88;
+
+// Son karelerin ortalaması: tek bir titrek kare pozu bozmasın. Açılar çember üstünde ortalanır
+function meanVec(list) {
+  const n = list.length;
+  const circ = (get) => Math.atan2(list.reduce((s, v) => s + Math.sin(get(v)), 0) / n, list.reduce((s, v) => s + Math.cos(get(v)), 0) / n);
+  const avg = (get) => list.reduce((s, v) => s + get(v), 0) / n;
+  return {
+    a: [0, 1, 2, 3].map((k) => circ((v) => v.a[k])),
+    vis: [0, 1, 2, 3].map((k) => list.filter((v) => v.vis[k]).length > n / 2),
+    len: [0, 1, 2, 3].map((k) => avg((v) => v.len[k])),
+    tilt: circ((v) => v.tilt),
+    head: { x: avg((v) => v.head.x), y: avg((v) => v.head.y) },
+  };
+}
 
 export function mount(view, { game, navigate }) {
   const life = new Life();
@@ -36,8 +51,8 @@ export function mount(view, { game, navigate }) {
       game,
       rules: [
         'Kameranın karşısına yan yana geçin; kollarınız ekrana sığsın.',
-        'Sırası gelen geri sayım bitene kadar en garip pozunu uydurur ve donar. Oyun pozu fotoğraflar.',
-        'Öbürü 7 saniye içinde aynı pozu yapmaya çalışır. Ekrandaki hayalet iskelet yol gösterir. Ne kadar hızlı kopyalarsa o kadar puan!',
+        'Sırası gelen geri sayım bitene kadar en garip pozunu uydurur ve donar. Kollar aşağıda sıradan bir duruş kabul edilmez!',
+        'Öbürü 8 saniye içinde aynı pozu yapar. Hayalet iskelet yol gösterir, her kol tutunca yeşile döner. Hızlı kopyalayan çok puan alır, tıpatıp aynısı +1 daha.',
       ],
       options: html`
         ${optHTML('Kişi Başı Poz', segHTML('turns', [['2', '2'], ['3', '3'], ['4', '4']], cfg.turns))}
@@ -58,7 +73,7 @@ export function mount(view, { game, navigate }) {
     cam.draw = (gx, players) => players.forEach((p, i) => { if (p) drawSkeleton(gx, cam, p, i); });
     waitPlayers(stage, life, cam, {
       title: 'Yan Yana Geçin',
-      tip: 'Kollarınızı açınca ekrana sığacak kadar geri çekilin.',
+      tip: 'Belinizden yukarısı görünsün. El kadrajdan biraz taşarsa da sorun değil.',
       onReady: () => play(),
     });
   }
@@ -95,30 +110,44 @@ export function mount(view, { game, navigate }) {
         </div>
         <div class="hud-bottom"><p class="hud-warn" data-warn></p></div>`, {}, { className: 'hud' });
       const warn = scene.querySelector('[data-warn]');
-      cam.onFrame = () => { warn.textContent = missingText(cam, [leader]); };
+      const recent = [];
+      cam.onFrame = (players, now) => {
+        warn.textContent = missingText(cam, [leader]);
+        const p = players[leader];
+        const b = p && body(p.lm, p.ar);
+        if (!b) return;
+        recent.push({ t: now, vec: poseVec(b), box: p.box });
+        while (recent.length && now - recent[0].t > 380) recent.shift();
+      };
       cam.draw = (gx, players) => players.forEach((p, i) => {
         if (p) drawSkeleton(gx, cam, p, i, { alpha: i === leader ? 1 : 0.35, glow: i === leader ? 0.5 : 0, label: i === leader ? 'Poz Ver!' : nameOf(i) });
       });
       announcer.turn(leader, 'poz');
       await life.sleep(900);
       await countdown(scene, life, { from: 3, final: 'Dondur!', step: 900, voice: 'go-dondur' });
-      const p = cam.players[leader];
-      const b = p && body(p.lm, p.ar);
-      if (b && b.arms) {
-        cam.flash();
-        return { vec: poseVec(b), img: cam.snapshot(p.box, 0.12), leader };
-      }
-      // Kare kare güncellenen uyarı bu mesajı silmesin
       cam.onFrame = null;
-      sfx.boing();
-      warn.textContent = `${nameOf(leader)} tam görünmedi. Kolların ekrana sığsın, tekrar!`;
-      await life.sleep(1600);
+      const p = cam.players[leader];
+      const usable = recent.filter((r) => r.vec.vis[0] && r.vec.vis[2]);
+      if (p && usable.length >= 2) {
+        const vec = meanVec(usable.map((r) => r.vec));
+        if (!ordinary(vec)) {
+          cam.flash();
+          return { vec, img: cam.snapshot(p.box, 0.12), leader };
+        }
+        sfx.boing();
+        announcer.react('nope');
+        warn.textContent = `Bu çok sıradan ${nameOf(leader)}! Kolları oynat, daha çılgın bir poz!`;
+      } else {
+        sfx.boing();
+        warn.textContent = `${nameOf(leader)} tam görünmedi. Omuzların ve kolların görünsün, tekrar!`;
+      }
+      await life.sleep(1700);
     }
   }
 
   function copy(copier, target) {
     return new Promise((resolve) => {
-      const st = { sim: 0, best: 0, hold: 0, done: false, ok: false, t: 0, label: '' };
+      const st = { sim: 0, best: 0, hold: 0, done: false, ok: false, t: 0, label: '', limbs: [-1, -1, -1, -1], level: 0 };
       let last = 0;
       let start = 0;
       const scene = stage.show(html`
@@ -153,7 +182,9 @@ export function mount(view, { game, navigate }) {
         if (ok) {
           const sec = (now - start) / 1000;
           pts = sec <= 2.5 ? 3 : sec <= 4.5 ? 2 : 1;
-          st.label = `Kopyaladı! +${pts}`;
+          const perfect = st.best >= PERFECT;
+          if (perfect) pts += 1;
+          st.label = perfect ? `Tıpatıp! +${pts}` : `Kopyaladı! +${pts}`;
           sfx.success();
           announcer.say('copied');
           const [cx, cy] = cam.client(head.x, head.y);
@@ -184,7 +215,13 @@ export function mount(view, { game, navigate }) {
         warn.textContent = missingText(cam, [copier]);
         const p = players[copier];
         const b = p && body(p.lm, p.ar);
-        st.sim = b ? similarity(target.vec, poseVec(b)) : 0;
+        const cmp = b ? compare(target.vec, poseVec(b)) : { score: 0, limbs: [-1, -1, -1, -1] };
+        st.sim = cmp.score;
+        st.limbs = cmp.limbs;
+        // Her onda birlik yaklaşmada incelen bir ses: sıcak soğuk oyunu gibi
+        const level = Math.floor(st.sim * 10);
+        if (start && !st.done && level > st.level && level >= 4) sfx.warm(st.sim);
+        st.level = level;
         const pct = Math.round(st.sim * 100);
         if (pct !== shown) {
           shown = pct;
@@ -206,13 +243,13 @@ export function mount(view, { game, navigate }) {
           }
           const b = body(p.lm, p.ar);
           if (b && !st.done) drawGhost(gx, target.vec, b, st.sim);
-          drawSkeleton(gx, cam, p, i, { label: '', glow: st.ok ? 1 : st.sim >= GOAL ? 0.6 : 0 });
+          drawSkeleton(gx, cam, p, i, { label: '', glow: st.ok ? 1 : st.sim >= GOAL ? 0.6 : 0, limbs: st.done ? null : st.limbs.map(limbColor) });
           if (p.lm[0].v > 0.4) {
             const x = p.lm[0].x * cam.W;
             const y = p.lm[0].y * cam.H;
             const sw = b ? b.sw * cam.H : 80;
             const pop = st.done ? 1 + Math.max(0, 0.35 - (t - st.t) / 1000) : 1;
-            const text = st.done ? st.label : `%${Math.round(st.sim * 100)}`;
+            const text = st.done ? st.label : st.sim >= GOAL ? 'Tut!' : st.sim >= 0.55 ? `Az kaldı %${Math.round(st.sim * 100)}` : `%${Math.round(st.sim * 100)}`;
             tag(gx, x, Math.max(24, y - Math.max(50, sw * 0.7)), text, st.done && !st.ok ? '#ff4f62' : PCOL[i], 18 * pop);
           }
         });
