@@ -74,6 +74,18 @@ body[data-theme="freeze"]     { --accent: #19aebf; --accent-d: #0f93a3; --accent
 body[data-theme="tilt"]       { --accent: #ff7a3d; --accent-d: #e8602a; --accent-soft: #ffe6d8; --wash-a: #ffb08a5a; --wash-b: #9fd2ff4c; }
 body[data-theme="liar"]       { --accent: #8a4dff; --accent-d: #7238e6; --accent-soft: #ece2ff; --wash-a: #b99bff5a; --wash-b: #ff8a974c; }
 body[data-theme="booth"]      { --accent: #ff5fa2; --accent-d: #e8458a; --accent-soft: #ffe0ee; --wash-a: #ff9ec65a; --wash-b: #ffd96a55; }
+body[data-theme="kiss"]       { --accent: #ff3d7f; --accent-d: #e02462; --accent-soft: #ffe0ea; --wash-a: #ff86ab5a; --wash-b: #ffd96a55; }
+body[data-theme="cowboy"]     { --accent: #d9822b; --accent-d: #b8661a; --accent-soft: #fbe6cf; --wash-a: #ffb0605a; --wash-b: #ff8a974c; }
+body[data-theme="catch"]      { --accent: #ff6f91; --accent-d: #e8506f; --accent-soft: #ffe1e8; --wash-a: #ff9fb55a; --wash-b: #ffd96a55; }
+body[data-theme="flappy"]     { --accent: #36b5ff; --accent-d: #1e98e0; --accent-soft: #dcf1ff; --wash-a: #7fcfff5a; --wash-b: #ffd96a4c; }
+body[data-theme="pong"]       { --accent: #6cbf2f; --accent-d: #55a01f; --accent-soft: #e6f6d4; --wash-a: #a6e35a5a; --wash-b: #ff9fc94c; }
+body[data-theme="rps"]        { --accent: #9b5cff; --accent-d: #7f41e6; --accent-soft: #eee3ff; --wash-a: #b99bff5a; --wash-b: #6fe0bc4c; }
+body[data-theme="tug"]        { --accent: #e0663a; --accent-d: #c44f25; --accent-soft: #ffe2d6; --wash-a: #ffa47f5a; --wash-b: #ffd96a55; }
+body[data-theme="volley"]     { --accent: #19b7c8; --accent-d: #0f98a8; --accent-soft: #d6f5f8; --wash-a: #6fdbe65a; --wash-b: #ff9fc94c; }
+body[data-theme="nose"]       { --accent: #ff9f1c; --accent-d: #e68400; --accent-soft: #fff0d6; --wash-a: #ffc25e5a; --wash-b: #7fc8ff4c; }
+body[data-theme="memory"]     { --accent: #ff5fa2; --accent-d: #e8458a; --accent-soft: #ffe0ee; --wash-a: #ff9ec65a; --wash-b: #a98bff4c; }
+body[data-theme="ninja"]      { --accent: #2fbf71; --accent-d: #1f9e5a; --accent-soft: #d8f6e5; --wash-a: #6fe0a05a; --wash-b: #ff86934c; }
+body[data-theme="rally"]      { --accent: #5b6cff; --accent-d: #4152e6; --accent-soft: #e2e5ff; --wash-a: #8f9cff5a; --wash-b: #ffd96a55; }
 body[data-theme="truthdare"]  { --accent: var(--cherry); --accent-d: var(--cherry-d); --accent-soft: #ffdade; --wash-a: #ff6f805a; --wash-b: #ffd96a66; }
 
 *, *::before, *::after { box-sizing: border-box; }

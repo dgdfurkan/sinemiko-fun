@@ -1,6 +1,7 @@
 // Tek AudioContext ve ses yolları: music, mask, sfx, clips
 
 let ctx = null;
+let limiter = null;
 const buses = {};
 let noise = null;
 let pink = null;
@@ -15,7 +16,7 @@ export function ensureAudio() {
     if (!AC) return null;
     // 'balanced' daha büyük tampon kullanır; yoğun anda ses kesilmesini önler
     ctx = new AC({ latencyHint: 'balanced' });
-    const limiter = ctx.createDynamicsCompressor();
+    limiter = ctx.createDynamicsCompressor();
     limiter.threshold.value = -4;
     limiter.knee.value = 6;
     limiter.ratio.value = 10;
@@ -75,6 +76,61 @@ export function pinkBuffer() {
     }
   }
   return pink;
+}
+
+/* ---------- Çıkış seçimi (kulaklık modu) ---------- */
+
+// Maske müziği ayrı bir aygıta, geri kalan her şey başka bir aygıta gidebilir mi (Chrome, Edge)
+export const canSplitOutput = () => {
+  const AC = window.AudioContext;
+  return !!(AC && AC.prototype.setSinkId) && typeof HTMLMediaElement !== 'undefined' && 'setSinkId' in HTMLMediaElement.prototype;
+};
+
+let maskEl = null;
+let maskDest = null;
+
+// sinkId verilirse maske yolu bir ses öğesi üzerinden o aygıta akar; null ise normal çıkışa döner
+export async function routeMask(sinkId) {
+  const c = ensureAudio();
+  if (!c) return false;
+  if (sinkId == null) {
+    if (!maskEl) return true;
+    try { buses.mask.disconnect(); } catch { /* bağlı değil */ }
+    buses.mask.connect(limiter);
+    maskEl.pause();
+    maskEl.srcObject = null;
+    maskEl = null;
+    return true;
+  }
+  if (!maskDest) maskDest = c.createMediaStreamDestination();
+  if (!maskEl) {
+    try { buses.mask.disconnect(); } catch { /* bağlı değil */ }
+    buses.mask.connect(maskDest);
+    maskEl = new Audio();
+    maskEl.srcObject = maskDest.stream;
+  }
+  try {
+    await maskEl.setSinkId(sinkId);
+    await maskEl.play();
+    return true;
+  } catch (err) {
+    console.warn(err);
+    await routeMask(null);
+    return false;
+  }
+}
+
+// Ana çıkış (efektler, kayıtlar, müzik); boş dize sistemin varsayılanı
+export async function setOutput(sinkId) {
+  const c = ensureAudio();
+  if (!c || !c.setSinkId) return false;
+  try {
+    if ((c.sinkId || '') !== (sinkId || '')) await c.setSinkId(sinkId || '');
+    return true;
+  } catch (err) {
+    console.warn(err);
+    return false;
+  }
 }
 
 // Sekme gizlenince sesi dondur, dönünce devam et

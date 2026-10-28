@@ -18,6 +18,7 @@ import { burst } from '../fx/confetti.js';
 import { HUM_CATS } from '../data/voice.js';
 import { lobbyHTML, optHTML, FIRST_OPTIONS, coinFlip, celebrate, versusFinaleHTML, finaleButtons, other, pSpan, shakeEl } from './common.js';
 import { micGate, clipCardHTML, wireClip, miniPlayer, recordScene, pickCardScene } from './mic.js';
+import { secretRec } from './secret.js';
 import { songHelper, ytField } from './songhelp.js';
 import { findSongs } from './songfind.js';
 import { openSettings } from '../screens/settings.js';
@@ -32,6 +33,7 @@ export function mount(view, { game, navigate }) {
   const rec = new VoiceRecorder();
   // Mırıldanan şarkıyı hatırlamazsa kesit ve sözlere bakabilir; tahminci görmez
   const helper = songHelper(view.querySelector('.game-hum'), life);
+  const sec = secretRec(view.querySelector('.game-hum'), life);
   life.add(() => {
     rec.close();
     stopClip();
@@ -50,7 +52,7 @@ export function mount(view, { game, navigate }) {
     const scene = stage.show(lobbyHTML({
       game,
       rules: [
-        'Mırıldanan, karttaki şarkıyı sözsüz olarak mikrofona mırıldanır. Diğeri o sırada duymaz.',
+        'Mırıldanan, karttaki şarkıyı sözsüz olarak mikrofona mırıldanır. Diğeri o sırada kulağını kapatır ya da kulaklıkta müzik dinler.',
         'Tahminci kaydı dinleyip şarkıyı bulmaya çalışır. İpucu almak ve yanlış tahmin puanı düşürür.',
         'Zor modda mırıltı tersten çalar. Bakalım şarkı tersten de tanınıyor mu?',
       ],
@@ -58,7 +60,8 @@ export function mount(view, { game, navigate }) {
         ${optHTML('Tur Sayısı', stepperHTML('rounds', cfg.rounds), 'Roller her turda değişir.')}
         ${optHTML('Şarkılar', chipsHTML('cats', HUM_CATS.map((c) => [c.id, c.name]), cfg.cats))}
         ${optHTML('Mod', segHTML('mode', [['normal', 'Normal'], ['ters', 'Ters (Zor)']], cfg.mode))}
-        ${optHTML('İlk Mırıldanan', segHTML('first', FIRST_OPTIONS(), cfg.first))}`,
+        ${optHTML('İlk Mırıldanan', segHTML('first', FIRST_OPTIONS(), cfg.first))}
+        ${sec.optionHTML()}`,
       start: 'Mikrofonu Aç ve Başla',
       startIcon: 'mic',
     }), { start: () => startGame() }, { className: 'has-lobby' });
@@ -66,6 +69,7 @@ export function mount(view, { game, navigate }) {
     bindChips(scene.querySelector('[data-chips="cats"]'), { values: cfg.cats, onChange: (s) => { cfg.cats = s; } });
     const segs = ['mode', 'first'].map((k) => bindSeg(scene.querySelector(`[data-seg="${k}"]`), { value: cfg[k], onChange: (v) => { cfg[k] = v; } }));
     stage.own(() => segs.forEach((x) => x.destroy()));
+    sec.bind(scene, stage);
   }
 
   async function startGame() {
@@ -77,6 +81,10 @@ export function mount(view, { game, navigate }) {
     starting = false;
     if (!ok) {
       if (life.alive && btn) btn.disabled = false;
+      return;
+    }
+    if (!(await sec.setup(stage))) {
+      if (life.alive) lobby();
       return;
     }
     g = { round: 0, total: cfg.rounds, first: 0, deck: buildDeck(), hard: cfg.mode === 'ters', over: false };
@@ -102,21 +110,13 @@ export function mount(view, { game, navigate }) {
     scoreboard.setMid(`Tur ${g.round + 1} / ${g.total}`);
     scoreboard.setActive(singer);
     music.duck('hum', false);
-    const q = g.cur.guesser;
-    const slot = (i) => (i === singer
-      ? html`<div class="duo-slot">${avatar(i, { pose: 'mic', props: 'mic', mood: 'happy', eyes: 'happy' })}<span class="role-chip p${i}">Mırıldanıyor</span></div>`
-      : html`<div class="duo-slot">${avatar(i, { pose: 'ears', eyes: 'shut', mood: 'flat' })}<span class="role-chip p${i}">Duymuyor</span></div>`);
-    stage.show(html`
-      <div class="duo-stage" data-in>${slot(0)}${slot(1)}</div>
-      <h2 class="t-title" data-in>${pSpan(singer)} Mırıldanıyor</h2>
-      <p class="t-lead" data-in>${nameOf(q)}, kulaklarını kapat ve ekrana bakma.</p>
-      <button class="btn btn--primary btn--big nudge" data-act="next" data-primary data-once>${icon('arrow')}Kulaklar Kapalı, Devam</button>`, {
-      next: () => pickSong(),
-    });
+    sec.turnScene(stage, { speaker: singer, guesser: g.cur.guesser, role: 'Mırıldanıyor', title: html`${pSpan(singer)} Mırıldanıyor`, onNext: () => pickSong() });
   }
 
   function pickSong() {
     const c = g.cur;
+    // Kulaklık müziği çalarken şarkı kesiti de kulaklıktan duyulurdu
+    helper.setLock(sec.masking ? 'Kulaklıkta müzik çalarken şarkı çalınmaz, tahmin eden duyardı. Sözlere bakabilirsin.' : '');
     helper.show(c.song);
     pickCardScene(stage, {
       hand: `${nameOf(c.singer)}, bu şarkıyı mırıldanacaksın`,
@@ -165,7 +165,7 @@ export function mount(view, { game, navigate }) {
         <button class="btn" data-act="redo">${icon('replay')}Tekrar Kaydet</button>
         <button class="btn btn--primary nudge" data-act="handoff" data-primary data-once>${dative(nameOf(c.guesser))} Geç${icon('arrow')}</button>
       </div>`, {
-      'play-a': () => clip.play(),
+      'play-a': () => { if (sec.mayPlay()) clip.play(); },
       redo: () => record(),
       handoff: () => handoff(),
     });
@@ -175,13 +175,15 @@ export function mount(view, { game, navigate }) {
   function handoff() {
     stopClip();
     helper.hide();
+    helper.setLock('');
     const c = g.cur;
     scoreboard.setActive(c.guesser);
     music.duck('hum', false);
+    const h = sec.handoff(c.guesser);
     const scene = stage.show(html`
-      <div class="big-blob" data-in>${avatar(c.guesser, { pose: 'ears', eyes: 'shut', mood: 'flat' })}</div>
-      <h2 class="t-title" data-in>${pSpan(c.guesser)}, Kulaklarını Aç!</h2>
-      <p class="t-lead" data-in>${g.hard ? 'Mırıltı tersten geliyor. Kolay gelsin!' : `${nameOf(c.singer)} bir şarkı mırıldandı. Bakalım tanıyacak mısın?`}</p>
+      <div class="big-blob" data-in>${avatar(c.guesser, sec.mode === 'phones' ? { props: 'phones', eyes: 'shut', mood: 'happy' } : { pose: 'ears', eyes: 'shut', mood: 'flat' })}</div>
+      <h2 class="t-title" data-in>${h.title}</h2>
+      <p class="t-lead" data-in>${h.lead}${g.hard ? 'Mırıltı tersten geliyor. Kolay gelsin!' : `${nameOf(c.singer)} bir şarkı mırıldandı. Bakalım tanıyacak mısın?`}</p>
       <button class="btn btn--primary btn--big nudge" data-act="ready" data-primary data-once>${icon('phones')}Hazırım</button>`, {
       ready: async () => {
         music.duck('hum', true);

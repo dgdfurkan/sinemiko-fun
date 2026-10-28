@@ -18,6 +18,7 @@ import { burst } from '../fx/confetti.js';
 import { CATEGORIES, DEFAULT_CATS } from '../data/reverse-words.js';
 import { lobbyHTML, optHTML, FIRST_OPTIONS, coinFlip, celebrate, versusFinaleHTML, finaleButtons, other, pSpan, shakeEl } from './common.js';
 import { micGate, clipCardHTML, wireClip, miniPlayer, recordScene, pickCardScene } from './mic.js';
+import { secretRec } from './secret.js';
 
 export const LEVELS = [
   { rate: 2.3, name: 'Süper Sincap', pts: 4 },
@@ -31,6 +32,7 @@ export function mount(view, { game, navigate }) {
   view.innerHTML = '<section class="screen game game-chipmunk"><div class="stage"></div></section>';
   const stage = new Stage(view.querySelector('.stage'), life);
   const rec = new VoiceRecorder();
+  const sec = secretRec(view.querySelector('.game-chipmunk'), life);
   life.add(() => {
     rec.close();
     stopClip();
@@ -48,14 +50,15 @@ export function mount(view, { game, navigate }) {
     const scene = stage.show(lobbyHTML({
       game,
       rules: [
-        'Söyleyen kartı mikrofona normal sesiyle söyler. Diğeri o sırada duymaz.',
+        'Söyleyen kartı mikrofona normal sesiyle söyler. Diğeri o sırada kulağını kapatır ya da kulaklıkta müzik dinler.',
         'Tahminci kaydı önce süper hızlı sincap sesiyle dinler. Bilirse 4 puan.',
         'Bilemezse ses sincap, sonra dev sesi, en son normal olur. Her adımda puan azalır.',
       ],
       options: html`
         ${optHTML('Tur Sayısı', stepperHTML('rounds', cfg.rounds), 'Roller her turda değişir.')}
         ${optHTML('Kategoriler', chipsHTML('cats', CATEGORIES.map((c) => [c.id, c.name]), cfg.cats))}
-        ${optHTML('İlk Söyleyen', segHTML('first', FIRST_OPTIONS(), cfg.first))}`,
+        ${optHTML('İlk Söyleyen', segHTML('first', FIRST_OPTIONS(), cfg.first))}
+        ${sec.optionHTML()}`,
       start: 'Mikrofonu Aç ve Başla',
       startIcon: 'mic',
       note: 'Kayıtlar yalnızca bu cihazda kalır.',
@@ -64,6 +67,7 @@ export function mount(view, { game, navigate }) {
     bindChips(scene.querySelector('[data-chips="cats"]'), { values: cfg.cats, onChange: (s) => { cfg.cats = s; } });
     const seg = bindSeg(scene.querySelector('[data-seg="first"]'), { value: cfg.first, onChange: (v) => { cfg.first = v; } });
     stage.own(() => seg.destroy());
+    sec.bind(scene, stage);
   }
 
   async function startGame() {
@@ -75,6 +79,10 @@ export function mount(view, { game, navigate }) {
     starting = false;
     if (!ok) {
       if (life.alive && btn) btn.disabled = false;
+      return;
+    }
+    if (!(await sec.setup(stage))) {
+      if (life.alive) lobby();
       return;
     }
     g = { round: 0, total: cfg.rounds, first: 0, deck: buildDeck(), over: false };
@@ -99,17 +107,7 @@ export function mount(view, { game, navigate }) {
     scoreboard.setMid(`Tur ${g.round + 1} / ${g.total}`);
     scoreboard.setActive(speaker);
     music.duck('chipmunk', false);
-    const { guesser: q } = g.cur;
-    const slot = (i) => (i === speaker
-      ? html`<div class="duo-slot">${avatar(i, { pose: 'mic', props: 'mic', mood: 'smirk' })}<span class="role-chip p${i}">Söylüyor</span></div>`
-      : html`<div class="duo-slot">${avatar(i, { pose: 'ears', eyes: 'shut', mood: 'flat' })}<span class="role-chip p${i}">Duymuyor</span></div>`);
-    stage.show(html`
-      <div class="duo-stage" data-in>${slot(0)}${slot(1)}</div>
-      <h2 class="t-title" data-in>${pSpan(speaker)} Söylüyor</h2>
-      <p class="t-lead" data-in>${nameOf(q)}, kulaklarını kapat ve ekrana bakma.</p>
-      <button class="btn btn--primary btn--big nudge" data-act="next" data-primary data-once>${icon('arrow')}Kulaklar Kapalı, Devam</button>`, {
-      next: () => pickWord(),
-    });
+    sec.turnScene(stage, { speaker, guesser: g.cur.guesser, role: 'Söylüyor', title: html`${pSpan(speaker)} Söylüyor`, onNext: () => pickWord() });
   }
 
   function pickWord() {
@@ -148,7 +146,7 @@ export function mount(view, { game, navigate }) {
         <button class="btn" data-act="redo">${icon('replay')}Tekrar Kaydet</button>
         <button class="btn btn--primary nudge" data-act="handoff" data-primary data-once>${dative(nameOf(c.guesser))} Geç${icon('arrow')}</button>
       </div>`, {
-      'play-a': () => clip.play(),
+      'play-a': () => { if (sec.mayPlay()) clip.play(); },
       redo: () => record(),
       handoff: () => handoff(),
     });
@@ -160,10 +158,11 @@ export function mount(view, { game, navigate }) {
     const c = g.cur;
     scoreboard.setActive(c.guesser);
     music.duck('chipmunk', false);
+    const h = sec.handoff(c.guesser);
     const scene = stage.show(html`
-      <div class="big-blob" data-in>${avatar(c.guesser, { pose: 'ears', eyes: 'shut', mood: 'flat' })}</div>
-      <h2 class="t-title" data-in>${pSpan(c.guesser)}, Kulaklarını Aç!</h2>
-      <p class="t-lead" data-in>Önce süper sincap sesi geliyor. İlk dinleyişte bilirsen 4 puan.</p>
+      <div class="big-blob" data-in>${avatar(c.guesser, sec.mode === 'phones' ? { props: 'phones', eyes: 'shut', mood: 'happy' } : { pose: 'ears', eyes: 'shut', mood: 'flat' })}</div>
+      <h2 class="t-title" data-in>${h.title}</h2>
+      <p class="t-lead" data-in>${h.lead}Önce süper sincap sesi geliyor. İlk dinleyişte bilirsen 4 puan.</p>
       <button class="btn btn--primary btn--big nudge" data-act="ready" data-primary data-once>${icon('phones')}Hazırım</button>`, {
       ready: async () => {
         music.duck('chipmunk', true);

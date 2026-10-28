@@ -398,6 +398,132 @@
           "Ne güzel bir anı oldu!"
         ]
       ]
+    },
+    {
+      "id": "duello",
+      "note": "Start calls for new camera duel games. Each one explodes with joy and playful energy. The cowboy lines are a dramatic Western standoff: the waiting line is slow, low and suspenseful, the fire command is a sharp, loud, thrilling shout. The fake calls start exactly like the real fire command, then turn into a silly giggly twist. Rock paper scissors is a rhythmic chant, each word punchier than the one before.",
+      "lines": [
+        [
+          "go-ye",
+          "Ağzını aç!"
+        ],
+        [
+          "go-servis",
+          "Servis!"
+        ],
+        [
+          "go-opucuk",
+          "Öpücükler uçsun!"
+        ],
+        [
+          "go-gaz",
+          "Gaza bas!"
+        ],
+        [
+          "tug-go",
+          "Çekin!"
+        ],
+        [
+          "cowboy-ready",
+          "Eller aşağıda... Bekleyin..."
+        ],
+        [
+          "cowboy-fire",
+          "Ateş!"
+        ],
+        [
+          "fake-1",
+          "Ateş... böceği!"
+        ],
+        [
+          "fake-2",
+          "Ateşli bakış!"
+        ],
+        [
+          "fake-3",
+          "At... lıkarınca!"
+        ],
+        [
+          "rps-1",
+          "Taş!"
+        ],
+        [
+          "rps-2",
+          "Kağıt!"
+        ],
+        [
+          "rps-3",
+          "Makas!"
+        ]
+      ]
+    },
+    {
+      "id": "duello2",
+      "note": "Reactions during cute couple duels. Teases come with a soft laugh, cheers burst with joy, the kiss sound is a playful smacking word said with a giggle. Never sad, never shouting.",
+      "lines": [
+        [
+          "early",
+          "Erken çektin!"
+        ],
+        [
+          "tie-rps",
+          "Aynısını attınız!"
+        ],
+        [
+          "memory-watch",
+          "İyi izleyin!"
+        ],
+        [
+          "memory-go",
+          "Sıra sizde!"
+        ],
+        [
+          "crash",
+          "Düştü!"
+        ],
+        [
+          "point",
+          "Sayı!"
+        ],
+        [
+          "kiss-clash",
+          "Öpücükler çarpıştı!"
+        ],
+        [
+          "oil",
+          "Kaydın!"
+        ]
+      ]
+    },
+    {
+      "id": "duello3",
+      "note": "Short joyful calls and reactions in a cute couple duel. Say every word clearly and fully, with a smile you can hear. The spicy line is a funny, dramatic overreaction, like tasting a hot pepper.",
+      "lines": [
+        [
+          "go-uc",
+          "Uç bakalım!"
+        ],
+        [
+          "go-ciz",
+          "Çiz bakalım!"
+        ],
+        [
+          "go-kes",
+          "Kes bakalım!"
+        ],
+        [
+          "smash",
+          "Smaç geldi!"
+        ],
+        [
+          "kiss-hit",
+          "Tam yanağa!"
+        ],
+        [
+          "spicy",
+          "Ay, çok acı!"
+        ]
+      ]
     }
   ]
 }

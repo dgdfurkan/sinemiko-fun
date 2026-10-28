@@ -48,6 +48,13 @@ function armOut(b, s, e, w, dir) {
   return (w.x - s.x) * dir > 0.85 * b.sw && Math.abs(w.y - s.y) < 0.6 * b.sw;
 }
 
+// Kovboy Düellosu: iki kol da aşağıda mı, kollardan biri omuzun üstüne kalktı mı
+export const handsDown = (b) => armDown(b, b.ls, b.le, b.lw) && armDown(b, b.rs, b.re, b.rw);
+export function handRaised(b) {
+  const one = (s, e, w) => armUp(b, s, e, w) || (w.v > LIMB && !w.out && w.y < s.y - 0.2 * b.sw);
+  return one(b.ls, b.le, b.lw) || one(b.rs, b.re, b.rw);
+}
+
 /* ---------- Kart çizimleri ---------- */
 
 const BASE = { n: [50, 22], ls: [36, 44], rs: [64, 44], lh: [41, 80], rh: [59, 80] };

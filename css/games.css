@@ -112,9 +112,9 @@
 }
 .home-grid[data-layout="ses"] { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
 .home-grid[data-layout="yarisma"] { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
-.home-grid[data-layout="kamera"] { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
-/* Hepsi sekmesinde 28 oyun: kartlar okunur boyda kalsın, raf aşağı kaysın */
-.home:has(.home-grid[data-layout="all"]) { overflow-y: auto; scrollbar-width: thin; }
+/* Hepsi sekmesinde 40, kamerada 22 oyun: kartlar okunur boyda kalsın, raf aşağı kaysın */
+.home:has(.home-grid[data-layout="all"]), .home:has(.home-grid[data-layout="kamera"]) { overflow-y: auto; scrollbar-width: thin; }
+.home-grid[data-layout="kamera"] { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: clamp(200px, 31vh, 280px); padding-bottom: 8px; }
 .home-grid[data-layout="all"] { grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: clamp(170px, 26vh, 250px); padding-bottom: 8px; }
 .home-grid[data-layout="ikimiz"] { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
 .gcard {
@@ -1460,3 +1460,147 @@ button.qz-opt[disabled] { opacity: .55; cursor: default; }
 .booth-strip img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border: 2.5px solid var(--ink); border-radius: 6px; }
 .booth-strip figcaption { margin-top: 4px; font: 700 16px/1 var(--hand); text-align: center; }
 .booth-final { gap: clamp(8px, 1.4vh, 16px); }
+
+/* ---------- Gizli kayıt: kulaklık modu ---------- */
+.opt.secret-found .opt-note { color: var(--ink); font-weight: 700; }
+.opt.secret-found .seg { animation: badgeNudge 1.2s ease-in-out 3; }
+.ss-host { display: contents; }
+.secret-setup { display: flex; flex-direction: column; gap: clamp(10px, 1.8vh, 18px); width: min(960px, 100%); max-height: 100%; overflow-y: auto; padding: clamp(16px, 2.6vh, 28px) clamp(16px, 2vw, 28px); scrollbar-width: thin; }
+.ss-head { display: flex; align-items: center; gap: 14px; text-align: left; }
+.ss-head .hud-tip { margin-top: 4px; }
+.ss-ic { display: grid; place-items: center; flex: none; width: 58px; height: 58px; color: #fff; background: var(--accent); border: var(--bw) solid var(--ink); border-radius: 50%; box-shadow: 0 4px 0 var(--ink); animation: pulse 1.6s ease-in-out infinite; }
+.ss-ic .ic { width: 30px; height: 30px; }
+.ss-row { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.ss-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(12px, 2vh, 20px) 28px; align-items: start; }
+.ss-col { display: flex; flex-direction: column; gap: clamp(10px, 1.8vh, 18px); min-width: 0; }
+@media (max-width: 820px) { .ss-grid { grid-template-columns: 1fr; } }
+.dev-list { display: flex; flex-direction: column; gap: 7px; width: 100%; }
+.dev {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 12px; text-align: left;
+  font: 600 clamp(14px, 1vw, 16px)/1.2 var(--body); color: var(--ink);
+  background: var(--card); border: 2.5px solid var(--ink); border-radius: 14px; box-shadow: 0 3px 0 var(--ink);
+  cursor: pointer; transition: background-color .2s, transform .25s var(--spring), box-shadow .2s;
+}
+.dev:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.dev-ic { display: grid; place-items: center; flex: none; width: 30px; height: 30px; background: var(--paper); border: 2px solid var(--ink); border-radius: 50%; }
+.dev-ic .ic { width: 17px; height: 17px; }
+.dev-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dev-check { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border: 2.5px solid var(--ink); border-radius: 50%; background: var(--paper); }
+.dev-check .ic { width: 14px; height: 14px; transform: scale(0); transition: transform .3s var(--spring); }
+.dev.on { background: var(--accent-soft); }
+.dev.on .dev-check { background: var(--accent); color: #fff; }
+.dev.on .dev-check .ic { transform: scale(1); }
+.ss-row .btn.on { background: var(--accent); color: #fff; }
+.ss-warn { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 10px 14px; font: 600 14px/1.35 var(--body); text-align: left; background: #fff0c2; border: 2.5px solid var(--ink); border-radius: 14px; }
+.ss-warn .ic { flex: none; width: 20px; height: 20px; margin-top: 1px; }
+
+.secret-pill {
+  position: absolute; left: var(--gutter); bottom: clamp(14px, 2.4vh, 26px); z-index: 4;
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 8px 6px 14px;
+  background: var(--card); border: var(--bw) solid var(--ink); border-radius: 999px; box-shadow: 0 5px 0 var(--ink);
+}
+.secret-pill[hidden] { display: none; }
+.secret-pill .ibtn { width: 40px; height: 40px; }
+.sp-text { font: 600 clamp(13px, .95vw, 16px)/1.1 var(--body); }
+.sp-text b { font: 400 1.1em/1 var(--display); color: var(--accent-d); }
+.sp-eq { display: flex; align-items: flex-end; gap: 3px; height: 22px; }
+.sp-eq i { width: 5px; height: 100%; background: var(--accent); border: 1.5px solid var(--ink); border-radius: 3px; transform-origin: bottom; animation: eqBar .9s ease-in-out infinite; }
+.sp-eq i:nth-child(2) { animation-delay: -.3s; }
+.sp-eq i:nth-child(3) { animation-delay: -.6s; }
+.sp-eq i:nth-child(4) { animation-delay: -.15s; }
+@keyframes eqBar { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .sp-eq i, .ss-ic { animation: none; } }
+
+/* ---------- Yeni düello oyunlarının kart çizimleri ---------- */
+.art-kface.k1 { transform-box: fill-box; transform-origin: 50% 100%; animation: wiggle 2.4s ease-in-out infinite; }
+.art-kface.k2 { transform-box: fill-box; transform-origin: 50% 100%; animation: wiggle 2.4s ease-in-out -1.2s infinite; }
+.art-kfly { animation: kissFly 1.8s cubic-bezier(.4,0,.6,1) infinite; }
+@keyframes kissFly { 0% { transform: translate(-36px, 6px) scale(.5); opacity: 0; } 20% { opacity: 1; } 70% { transform: translate(38px, -4px) scale(1); opacity: 1; } 100% { transform: translate(52px, 6px) scale(.4); opacity: 0; } }
+.art-lipmark { animation: lipPop 1.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes lipPop { 0%, 72% { transform: scale(0); } 82% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.art-kspeed { animation: recBlink .9s steps(2) infinite; }
+.art-hat { transform-box: fill-box; transform-origin: 50% 100%; animation: hatFly 2.6s ease-in-out infinite; }
+@keyframes hatFly { 0%, 55% { transform: none; } 70% { transform: translate(18px, -30px) rotate(24deg); } 85% { transform: translate(26px, -10px) rotate(40deg); } 100% { transform: none; } }
+.art-bang { transform-box: fill-box; transform-origin: center; animation: bangPop 2.6s ease-out infinite; }
+@keyframes bangPop { 0%, 50% { transform: scale(0); } 58% { transform: scale(1.25) rotate(12deg); } 75%, 100% { transform: scale(0); } }
+.art-weed { animation: weedRoll 3.4s linear infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes weedRoll { from { transform: translateX(-30px) rotate(0); } to { transform: translateX(150px) rotate(720deg); } }
+.art-fall { animation: itemFall 2.2s ease-in infinite; }
+.art-fall.f2 { animation-delay: -.8s; }
+.art-fall.f3 { animation-delay: -1.5s; }
+@keyframes itemFall { 0% { transform: translateY(-30px); opacity: 0; } 15% { opacity: 1; } 80% { transform: translateY(60px); opacity: 1; } 100% { transform: translateY(70px); opacity: 0; } }
+.art-mouth { transform-box: fill-box; transform-origin: center; animation: chomp .55s ease-in-out infinite alternate; }
+@keyframes chomp { from { transform: scaleY(.25); } to { transform: scaleY(1); } }
+.art-bird.b1 { animation: flapBob 1s ease-in-out infinite; }
+.art-bird.b2 { animation: flapBob 1s ease-in-out -.5s infinite; }
+@keyframes flapBob { 0%, 100% { transform: translateY(6px); } 30% { transform: translateY(-10px); } }
+.art-wing { transform-box: fill-box; transform-origin: 80% 50%; animation: wingFlap .25s ease-in-out infinite alternate; }
+@keyframes wingFlap { from { transform: rotate(-30deg); } to { transform: rotate(16deg); } }
+.art-pad.p1 { animation: padMove 1.6s ease-in-out infinite; }
+.art-pad.p2 { animation: padMove 1.6s ease-in-out -.8s infinite; }
+@keyframes padMove { 0%, 100% { transform: translateY(-18px); } 50% { transform: translateY(20px); } }
+.art-pball { animation: pongBall 1.6s linear infinite; }
+@keyframes pongBall { 0% { transform: translate(-62px, -20px); } 50% { transform: translate(60px, 18px); } 100% { transform: translate(-62px, -20px); } }
+.art-rps-i { transform-box: fill-box; transform-origin: 50% 100%; animation: rpsBob .6s ease-in-out infinite alternate; }
+.art-rps-i.r2 { animation-delay: -.2s; }
+.art-rps-i.r3 { animation-delay: -.4s; }
+@keyframes rpsBob { from { transform: translateY(4px); } to { transform: translateY(-8px) rotate(-4deg); } }
+.art-rope { animation: ropePull 1.4s ease-in-out infinite; }
+@keyframes ropePull { 0%, 100% { transform: translateX(-14px); } 50% { transform: translateX(14px); } }
+.art-vball { animation: vballArc 2s ease-in-out infinite; }
+@keyframes vballArc { 0% { transform: translate(-52px, 40px); } 50% { transform: translate(0, -6px); } 100% { transform: translate(52px, 36px); } }
+.art-glove.g2 { animation-delay: -.8s; }
+.art-nosey { transform-box: fill-box; transform-origin: 50% 100%; animation: wiggle 1.6s ease-in-out infinite; }
+.art-nosedraw .art-trace { stroke-dasharray: 220; stroke-dashoffset: 220; animation: traceDraw 2.6s linear infinite; }
+.art-mem { transform-box: fill-box; transform-origin: center; animation: memBlink 2.5s steps(1) infinite; }
+.art-mem.m2 { animation-delay: .5s; }
+.art-mem.m3 { animation-delay: 1s; }
+.art-mem.m4 { animation-delay: 1.5s; }
+.art-mem.m5 { animation-delay: 2s; }
+@keyframes memBlink { 0%, 20% { transform: scale(1.12); filter: brightness(1.15); } 21%, 100% { transform: none; filter: saturate(.55); } }
+.art-melon { animation: halfL 1.8s ease-in-out infinite; }
+.art-melon2 { animation: halfR 1.8s ease-in-out infinite; }
+@keyframes halfL { 0%, 30% { transform: none; } 70%, 100% { transform: translate(-10px, 14px) rotate(-8deg); } }
+@keyframes halfR { 0%, 30% { transform: none; } 70%, 100% { transform: translate(10px, -10px) rotate(8deg); } }
+.art-slash { stroke-dasharray: 180; stroke-dashoffset: 180; animation: slashDraw 1.8s ease-out infinite; }
+@keyframes slashDraw { 0%, 20% { stroke-dashoffset: 180; opacity: 1; } 35% { stroke-dashoffset: 0; opacity: 1; } 60%, 100% { stroke-dashoffset: 0; opacity: 0; } }
+.art-drop { animation: floaty 1.8s ease-in-out infinite; }
+.art-dash { animation: roadDash .7s linear infinite; }
+@keyframes roadDash { from { transform: translateY(0); } to { transform: translateY(44px); } }
+.art-car { transform-box: fill-box; transform-origin: 50% 70%; animation: carSteer 2.2s ease-in-out infinite; }
+@keyframes carSteer { 0%, 100% { transform: translateX(-16px) rotate(-6deg); } 50% { transform: translateX(16px) rotate(6deg); } }
+.art-cone { animation: floaty 2s ease-in-out infinite; }
+.gcard:hover .art-wing, .gcard:hover .art-mouth { animation-duration: .15s; }
+.gcard:hover .art-dash { animation-duration: .3s; }
+@media (prefers-reduced-motion: reduce) {
+  .art-kfly, .art-hat, .art-bang, .art-weed, .art-fall, .art-mouth, .art-bird, .art-wing, .art-pad, .art-pball, .art-rps-i, .art-rope, .art-vball, .art-mem, .art-melon, .art-melon2, .art-slash, .art-dash, .art-car { animation: none; }
+}
+
+/* ---------- Düello oyunlarının sahne parçaları ---------- */
+.cowboy-call, .rps-chant {
+  position: absolute; left: 50%; top: 44%; translate: -50% -50%;
+  font: 400 clamp(54px, min(7vw, 12vh), 120px)/1 var(--display); color: #fff; text-align: center; white-space: nowrap;
+  -webkit-text-stroke: .1em var(--ink); paint-order: stroke fill;
+  pointer-events: none;
+}
+.cowboy-call { opacity: 0; transition: opacity .25s; }
+.cowboy-call.on { opacity: 1; }
+.cowboy-call.real { color: #ffcd3c; font-size: clamp(80px, min(11vw, 18vh), 190px); }
+.cowboy-call.fake { color: #fff; }
+.rps-chant.p0 { color: var(--p1); }
+.rps-chant.p1 { color: var(--p2); }
+.rps-legend { display: flex; gap: 10px; justify-content: center; }
+.rps-card { display: flex; flex-direction: column; align-items: center; gap: 2px; width: clamp(92px, 8.4vw, 130px); padding: 6px 8px 8px; background: var(--card); border: var(--bw) solid var(--ink); border-radius: 16px; box-shadow: 0 4px 0 var(--ink); }
+.rps-card b { font: 400 clamp(18px, 1.4vw, 24px)/1 var(--display); color: var(--accent-d); }
+.rps-card span:last-child { font: 600 12px/1.1 var(--body); color: var(--ink-2); }
+.rps-fig { width: 62%; }
+.rps-fig svg { display: block; width: 100%; height: auto; }
+.mem-stage { position: absolute; left: 50%; top: 48%; translate: -50% -50%; pointer-events: none; }
+.mem-card { display: flex; flex-direction: column; align-items: center; gap: 6px; width: clamp(170px, min(16vw, 30vh), 260px); padding: 14px 14px 16px; background: var(--card); border: var(--bw) solid var(--ink); border-radius: 26px; box-shadow: 0 8px 0 var(--ink), 0 0 0 10px var(--c); }
+.mem-card svg { display: block; width: 72%; height: auto; }
+.mem-card b { font: 400 clamp(24px, min(2.2vw, 4vh), 38px)/1 var(--display); color: #fff; -webkit-text-stroke: .14em var(--ink); paint-order: stroke fill; }
+.mem-dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 8px 12px; background: var(--card); border: var(--bw) solid var(--ink); border-radius: 999px; box-shadow: 0 4px 0 var(--ink); }
+.mem-dots i { width: 18px; height: 18px; border: 2.5px solid var(--ink); border-radius: 50%; background: #efe6f3; transition: background-color .2s, transform .3s var(--spring); }
+.mem-dots i.on { transform: scale(1.15); }

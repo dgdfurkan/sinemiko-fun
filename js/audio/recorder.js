@@ -33,12 +33,28 @@ export function micErrorText(err) {
   return 'Mikrofon açılamadı. Sayfayı yenileyip tekrar dene.';
 }
 
+// Kulaklık modunda kayıt bilgisayarın kendi mikrofonundan alınır. Kulaklığın mikrofonu açılırsa
+// Bluetooth kulaklık telefon moduna geçer, müzik bozulur ve kayda kulaklığı takanın sesi girer
+let preferredMic = null;
+export function setPreferredMic(id) {
+  preferredMic = id || null;
+}
+
 async function getStream() {
   const support = micSupport();
   if (support !== 'ok') {
     const e = new Error(support);
     e.name = support;
     throw e;
+  }
+  if (preferredMic) {
+    try {
+      return await navigator.mediaDevices.getUserMedia({ audio: { ...CONSTRAINTS.audio, deviceId: { exact: preferredMic } } });
+    } catch (err) {
+      // Mikrofon çıkarılmış olabilir; varsayılana dön
+      if (err && (err.name === 'OverconstrainedError' || err.name === 'NotFoundError')) preferredMic = null;
+      else throw err;
+    }
   }
   return navigator.mediaDevices.getUserMedia(CONSTRAINTS);
 }

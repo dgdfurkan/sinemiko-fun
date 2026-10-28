@@ -220,6 +220,8 @@ export function songHelper(host, life) {
   let song = null;
   let token = 0;
   let recording = false;
+  // Kulaklık modunda söyleyen şarkıyı çalamaz; dolu ise nedeni
+  let lockMsg = '';
   let open = false;
   let lyr = null;
   let lines = [];
@@ -479,6 +481,10 @@ export function songHelper(host, life) {
 
   async function play(from = null, to = null) {
     if (!song || recording) return;
+    if (lockMsg) {
+      toast(lockMsg, { tone: 'warn', ms: 3200 });
+      return;
+    }
     root.classList.add('is-loading');
     const my = token;
     const ok = await ensureMedia();
@@ -688,6 +694,10 @@ export function songHelper(host, life) {
       pause();
       setOpen(false);
       root.hidden = true;
+    },
+    setLock(msg) {
+      lockMsg = msg || '';
+      if (lockMsg) pause();
     },
     // Kayıtta ses çalmaz, mikrofona karışır; sözler açık kalabilir
     setRecording(on) {

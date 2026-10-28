@@ -22,6 +22,7 @@ import {
 import { songHelper } from './songhelp.js';
 import { songByTitle } from './songfind.js';
 import { micGate, clipCardHTML, wireClip as wireClipBase, miniPlayer, recordScene as recordSceneBase } from './mic.js';
+import { secretRec } from './secret.js';
 
 const MAX_SEC = 10;
 const POINTS = { full: 3, close: 1, miss: 0 };
@@ -38,6 +39,8 @@ export function mount(view, { game, navigate }) {
   const rec = new VoiceRecorder();
   // Şarkılar kategorisinde tur bitince şarkının tam hali ve sözleri dinlenebilir
   const helper = songHelper(view.querySelector('.game-reverse'), life);
+  // Tahminci ya kulaklarını kapatır ya da kulaklıkta müzik dinler
+  const sec = secretRec(view.querySelector('.game-reverse'), life);
   life.add(() => {
     rec.close();
     stopClip();
@@ -62,7 +65,7 @@ export function mount(view, { game, navigate }) {
     const scene = stage.show(lobbyHTML({
       game,
       rules: [
-        'Söyleyen, kartta çıkan şeyi mikrofona söyler. Diğeri o sırada kulaklarını kapatır.',
+        'Söyleyen, kartta çıkan şeyi mikrofona söyler. Diğeri o sırada kulaklarını kapatır ya da kulaklıkta müzik dinler.',
         'Oyun kaydı tersine çevirir.',
         'Tahminci ters kaydı dinler ve duyduğunu aynen taklit eder.',
         'Taklit tekrar ters çevrilir. Ortaya çıkan sesten kelimeyi bulan puanı alır.',
@@ -70,7 +73,8 @@ export function mount(view, { game, navigate }) {
       options: html`
         ${optHTML('Tur Sayısı', stepperHTML('rounds', cfg.rounds), 'Roller her turda değişir.')}
         ${optHTML('Kategoriler', chipsHTML('cats', CATEGORIES.map((c) => [c.id, c.name]), cfg.cats))}
-        ${optHTML('İlk Söyleyen', segHTML('first', FIRST_OPTIONS(), cfg.first))}`,
+        ${optHTML('İlk Söyleyen', segHTML('first', FIRST_OPTIONS(), cfg.first))}
+        ${sec.optionHTML()}`,
       start: 'Mikrofonu Aç ve Başla',
       startIcon: 'mic',
       note: 'Tarayıcı mikrofon izni isteyecek. Kayıtlar yalnızca bu cihazda kalır.',
@@ -79,6 +83,7 @@ export function mount(view, { game, navigate }) {
     bindChips(scene.querySelector('[data-chips="cats"]'), { values: cfg.cats, onChange: (s) => { cfg.cats = s; } });
     const seg = bindSeg(scene.querySelector('[data-seg="first"]'), { value: cfg.first, onChange: (v) => { cfg.first = v; } });
     stage.own(() => seg.destroy());
+    sec.bind(scene, stage);
   }
 
   async function startGame() {
@@ -90,6 +95,10 @@ export function mount(view, { game, navigate }) {
     starting = false;
     if (!ok) {
       if (life.alive && btn) btn.disabled = false;
+      return;
+    }
+    if (!(await sec.setup(stage))) {
+      if (life.alive) lobby();
       return;
     }
     g = { round: 0, total: cfg.rounds, first: 0, deck: buildDeck(), archive: [], over: false, cur: null };
@@ -123,16 +132,7 @@ export function mount(view, { game, navigate }) {
   function turnIntro() {
     music.duck('reverse', false);
     const { speaker: s, guesser: q } = g.cur;
-    const slot = (i) => (i === s
-      ? html`<div class="duo-slot">${avatar(i, { pose: 'mic', props: 'mic', mood: 'smirk' })}<span class="role-chip p${i}">Söylüyor</span></div>`
-      : html`<div class="duo-slot">${avatar(i, { pose: 'ears', eyes: 'shut', mood: 'flat' })}<span class="role-chip p${i}">Duymuyor</span></div>`);
-    stage.show(html`
-      <div class="duo-stage" data-in>${slot(0)}${slot(1)}</div>
-      <h2 class="t-title" data-in>${pSpan(s)} Söylüyor</h2>
-      <p class="t-lead" data-in>${nameOf(q)}, kulaklarını kapat ve ekrana bakma. Hazır olunca ${nameOf(s)} devam etsin.</p>
-      <button class="btn btn--primary btn--big nudge" data-act="next" data-primary data-once>${icon('arrow')}Kulaklar Kapalı, Devam</button>`, {
-      next: () => pickWord(),
-    });
+    sec.turnScene(stage, { speaker: s, guesser: q, role: 'Söylüyor', title: html`${pSpan(s)} Söylüyor`, onNext: () => pickWord() });
   }
 
   const cardInner = (w) => html`<span class="wc-cat">${w.cat}</span><span class="wc-word">${w.text}</span>${w.hint ? html`<span class="wc-hint">${w.hint}</span>` : ''}`;
@@ -231,7 +231,7 @@ export function mount(view, { game, navigate }) {
         <button class="btn btn--primary nudge" data-act="flip" data-primary>${icon('rewind')}Ters Çevir</button>
       </div>
       <p class="t-hand" data-in>${nameOf(c.guesser)} hâlâ duymuyor, değil mi?</p>`, {
-      'play-a': () => clip.play(),
+      'play-a': () => { if (sec.mayPlay()) clip.play(); },
       redo: () => { if (!busy) recordA(); },
       flip: async () => {
         if (busy) return;
@@ -258,10 +258,11 @@ export function mount(view, { game, navigate }) {
     const c = g.cur;
     music.duck('reverse', false);
     scoreboard.setActive(c.guesser);
+    const h = sec.handoff(c.guesser);
     const scene = stage.show(html`
-      <div class="big-blob" data-in>${avatar(c.guesser, { pose: 'ears', eyes: 'shut', mood: 'flat' })}</div>
-      <h2 class="t-title" data-in>${pSpan(c.guesser)}, Kulaklarını Aç!</h2>
-      <p class="t-lead" data-in>${nameOf(c.speaker)} sana ters bir kayıt bıraktı. Dikkatle dinle, sonra aynen taklit et.</p>
+      <div class="big-blob" data-in>${avatar(c.guesser, sec.mode === 'phones' ? { props: 'phones', eyes: 'shut', mood: 'happy' } : { pose: 'ears', eyes: 'shut', mood: 'flat' })}</div>
+      <h2 class="t-title" data-in>${h.title}</h2>
+      <p class="t-lead" data-in>${h.lead}${nameOf(c.speaker)} sana ters bir kayıt bıraktı. Dikkatle dinle, sonra aynen taklit et.</p>
       <button class="btn btn--primary btn--big nudge" data-act="ready" data-primary data-once>${icon('phones')}Hazırım</button>`, {
       ready: async () => {
         music.duck('reverse', true);

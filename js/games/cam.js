@@ -171,7 +171,9 @@ export function camController(shell, life) {
 
   // Oyuncunun yüzünden ya da gövdesinden aynalı, kare bir fotoğraf keser.
   // Kameranın tam çözünürlüğünde kesilir; 8K albümde yumuşamasın diye küçültülmez.
-  cam.snapshot = (box, pad = 0.35, size = 0) => {
+  // decorate(g, map, k): fotoğrafın üstüne çizim; map(nx, ny) aynalı kadraj noktasını fotoğraf pikseline çevirir
+  // grab tuval döner (hızlı); JPEG'e çevirmek oyun bitince yapılabilir, oyun ortasında kare takılmaz
+  cam.grab = (box, pad = 0.35, size = 0, decorate = null) => {
     if (!box || !video.videoWidth) return null;
     const vw = video.videoWidth;
     const vh = video.videoHeight;
@@ -190,7 +192,20 @@ export function camController(shell, life) {
     og.scale(-1, 1);
     og.imageSmoothingQuality = 'high';
     og.drawImage(video, sx, sy, s, s, 0, 0, size, size);
-    return out.toDataURL('image/jpeg', 0.92);
+    if (decorate) {
+      og.setTransform(1, 0, 0, 1, 0, 0);
+      const k = size / s;
+      try {
+        decorate(og, (nx, ny) => [size - ((1 - nx) * vw - sx) * k, (ny * vh - sy) * k], k * vh);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    return out;
+  };
+  cam.snapshot = (...args) => {
+    const out = cam.grab(...args);
+    return out ? out.toDataURL('image/jpeg', 0.92) : null;
   };
 
   // Kadrajın tamamı, aynalı ve tam çözünürlükte (fotoğraf kabini için)

@@ -192,6 +192,24 @@ export const sfx = {
     hiss(c, { t, dur: 1.3, vol: 0.38, type: 'lowpass', f: 2600, f2: 180, q: 0.4, attack: 0.002 });
     hiss(c, { t: t + 0.02, dur: 0.45, vol: 0.22, type: 'bandpass', f: 900, q: 0.5, attack: 0.002 });
   },
+  // Oyuncak tabanca: kısa çatlama ve küçük gümbürtü
+  bang() {
+    const c = live(); if (!c) return;
+    const t = c.currentTime;
+    hiss(c, { t, dur: 0.16, vol: 0.5, type: 'highpass', f: 1800, q: 0.5, attack: 0.001 });
+    hiss(c, { t, dur: 0.5, vol: 0.3, type: 'lowpass', f: 1400, f2: 160, q: 0.5, attack: 0.002 });
+    tone(c, { type: 'sine', f: 180, f2: 45, t, dur: 0.35, vol: 0.4, attack: 0.002 });
+  },
+  // Kesme: hızlı süzülen hışırtı
+  slash() {
+    const c = live(); if (!c) return;
+    hiss(c, { dur: 0.16, vol: 0.2, type: 'bandpass', f: 2400, f2: 6000, q: 1.4, attack: 0.005 });
+  },
+  // Vahşi Batı ıslığı: dört notalık kısa motif
+  western() {
+    const c = live(); if (!c) return;
+    [[76, 0], [81, 0.28], [79, 0.7], [74, 0.98]].forEach(([m, d]) => tone(c, { type: 'sine', f: mtof(m), t: c.currentTime + d, dur: 0.42, vol: 0.09, attack: 0.04 }));
+  },
   fuse() {
     const c = live(); if (!c) return;
     hiss(c, { dur: 0.05 + Math.random() * 0.05, vol: 0.035, type: 'highpass', f: 3500 + Math.random() * 3000, attack: 0.002 });

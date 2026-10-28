@@ -6,6 +6,18 @@ Furkan ile Sinem'in oyun gecesi için hazırlanmış, tarayıcıda çalışan ç
 
 | Oyun | Nasıl Oynanır | Gerekenler |
 | --- | --- | --- |
+| Öpücük Savaşı | Dudaklarını büzüp bırakınca karşıya öpücük uçar, isabet eden ruj izi bırakır. Havada çarpışan öpücükler birbirini yok eder. | Kamera |
+| Kovboy Düellosu | Eller aşağıda beklenir, "Ateş!" denince elini ilk kaldıran vurur. Sahte komuta kanan yanar. | Kamera |
+| Ağzına At | Tepeden yağan şekerleri ağzını açıp yakalarsın. Altın kalp +3, acı biber -2. | Kamera |
+| Kanatlı Kafa | İki kuş aynı gökyüzünde; ağzını açınca, kaşını kaldırınca ya da göz kırpınca kanat çırpar (Instagram'daki Flying Face filtresi). | Kamera |
+| Kafa Tenisi | Raketi başını yukarı aşağı oynatarak yönetirsin. Vururken ağzını açarsan smaç (Face Tennis filtresi). | Kamera |
+| Taş Kağıt Makas | Vücutla oynanır: taş eller başta, kağıt eller havada, makas kollar çapraz. | Kamera |
+| Halat Çekme | Kollarını ne kadar hızlı sallarsan halat o kadar sana gelir. | Kamera |
+| Balon Voleybolu | Ortadaki fileden balonu ellerinle karşıya vurursun, kendi tarafına düşerse sayı rakibe. | Kamera |
+| Burunla Çiz | Burnun kalem olur; aynı şeklin noktalarını ilk toplayan turu alır. | Kamera |
+| Hafıza Dansı | Poz dizisini izler, sonra ezberden yaparsınız. Her tur dizi bir hamle uzar. | Kamera |
+| Dilim Dilim | Fırlayan meyveleri elini savurarak kesersin. Altın meyve +3, bomba -3. | Kamera |
+| Kafa Rallisi | Başını sağa sola oynatarak arabanı sürersin; kalpleri topla, konilerden kaç. | Kamera |
 | Poz Ver! | Ekranda çıkan pozu ilk yapıp tutan kazanır. Sinemiko Diyor Ki modunda tuzak kartlar da gelir. | Kamera |
 | Baloncuk Avı | Aşağıdan yükselen baloncukları ellerinle patlatırsın. Altın +3, bomba -3. | Kamera |
 | Kopya Kedi | Biri garip bir poz uydurup donar, öbürü hayalet iskelete bakıp aynısını yapmaya çalışır. | Kamera |
@@ -68,4 +80,5 @@ Sonra tarayıcıda `http://localhost:5177` adresini aç.
 - Ayarlar'a Gemini anahtarı eklenirse şarkı bulucu yarım hatırlanan sözden Google aramasıyla şarkıyı bulur ve YouTube kaydını getirir. Anahtar yalnızca o tarayıcıda saklanır.
 - Kamera oyunlarının albümleri 7680×4320 (8K) olarak indirilir; fotoğraflar kameranın tam çözünürlüğünde kesilir.
 - Mikrofon yalnızca kayıt sırasında açık kalır. Bluetooth kulaklıklar böylece kayıt dinlerken kaliteli moda döner.
+- Reverse Play, Sincap Sesi ve Mırıldan Bakalım'da tahmin eden kulak kapatmak yerine kulaklık takabilir: söyleyen kaydederken kulaklıkta müzik çalar. Kulaklık takılıysa seçenek kendiliğinden gelir. Chrome ve Edge'de müzik yalnızca kulaklığa, diğer sesler hoparlöre gider; kayıt her zaman bilgisayarın kendi mikrofonundan alınır.
 - İsimler, ses ayarları ve patlatılan baloncuk sayısı tarayıcıda saklanır.
