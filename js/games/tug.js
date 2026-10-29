@@ -86,7 +86,7 @@ async function round(ctx) {
   await ctx.countdown(scene, { final: 'Çekin!', voice: 'tug-go' });
   if (!ctx.life.alive || m.over) return;
   m.running = true;
-  m.t0 = performance.now();
+  m.t0 = ctx.now();
   m.clock = ctx.clock(clockEl, 30, { onEnd: () => end(ctx, need) });
 }
 
@@ -99,7 +99,7 @@ function draw(ctx, g, players, dt, t) {
   const R = 1 - L;
   players.forEach((p, i) => { if (p) drawSkeleton(g, cam, p, i, { alpha: 0.7, label: '', glow: clamp(m.pw[i] / 12, 0, 1) }); });
   if (m.running) {
-    const el = (performance.now() - m.t0) / 1000;
+    const el = (ctx.now() - m.t0) / 1000;
     const k = 0.045 + Math.min(0.05, el * 0.002);
     m.r = clamp(m.r + (m.pw[R] - m.pw[L]) * k * dt, -1.05, 1.05);
     if (Math.abs(m.r) >= 1) end(ctx, Math.ceil(Number(ctx.cfg.bestOf) / 2));

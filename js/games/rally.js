@@ -66,7 +66,7 @@ async function play(ctx) {
   const clockEl = scene.querySelector('[data-clock]');
   cam.onFrame = (players) => {
     warn.textContent = missingText(cam);
-    const now = performance.now();
+    const now = ctx.now();
     players.forEach((p, i) => {
       if (!p) return;
       const dir = m.oil[i] > now ? -1 : 1;
@@ -78,7 +78,7 @@ async function play(ctx) {
   if (!ctx.life.alive || m.over) return;
   m.base = base.map((b, i) => (b ? b.x : m.base[i]));
   m.running = true;
-  m.t0 = performance.now();
+  m.t0 = ctx.now();
   ctx.clock(clockEl, secs, {
     onEnd: () => {
       m.running = false;
@@ -102,7 +102,7 @@ function draw(ctx, g, dt, t) {
   if (!m || m.over) return;
   const W = cam.W;
   const H = cam.H;
-  const now = performance.now();
+  const now = ctx.now();
   const progress = m.running ? Math.min(1, (now - m.t0) / 1000 / Number(ctx.cfg.secs)) : 0;
   const speed = 0.38 + progress * 0.32;
   if (m.running) m.dist += speed * dt;

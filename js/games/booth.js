@@ -13,6 +13,9 @@ import { cannons } from '../fx/confetti.js';
 import { lobbyHTML, optHTML, celebrate } from './common.js';
 import { camShell, camController, camBoot, waitPlayers, missingText, drawFaceFrame, meter, PCOL, downloadAlbum } from './cam.js';
 import { exprById, smileOf, faceSVG } from '../vision/faces.js';
+import { FX_NAME } from './camfx.js';
+
+const BOOTH_FX = ['big', 'eyes', 'swap', 'cat', 'clown', 'shades', 'hearts', 'retro', 'noir', 'rainbow', 'pop'];
 
 const HOLD = 0.3;
 const WAIT = 8;
@@ -44,6 +47,7 @@ export function mount(view, { game, navigate }) {
   let g = null;
 
   function lobby() {
+    cam.look.release();
     g = null;
     cam.draw = null;
     cam.onFrame = null;
@@ -78,6 +82,9 @@ export function mount(view, { game, navigate }) {
 
   async function play() {
     g = { list: plan(Number(cfg.shots)), k: 0, photos: [], over: false };
+    // Her karede sürpriz bir efekt: ilk kare sade
+    const fx = shuffle(BOOTH_FX.slice());
+    g.fx = g.list.map((_, k) => (k === 0 ? null : fx[(k - 1) % fx.length]));
     announcer.preload(['booth-smile', 'booth-go', 'booth-done', 'cd-3', 'cd-2', 'cd-1', 'face-wow', 'face-kiss', 'face-wink', 'face-angry', 'face-tilt']);
     while (g.k < g.list.length) {
       await shot(g.list[g.k]);
@@ -102,6 +109,7 @@ export function mount(view, { game, navigate }) {
             <span class="cue-say">Kare ${g.k + 1} / ${g.list.length}</span>
             <div class="cue-fig">${art}</div>
             <span class="cue-name">${def.name}</span>
+            ${g.fx[g.k] && FX_NAME[g.fx[g.k]] ? html`<span class="cue-fx">${icon('sparkle')}${FX_NAME[g.fx[g.k]]}</span>` : ''}
             <span class="cue-tip">${def.free ? 'Geri sayımla çekiyorum!' : 'İkiniz de yapınca kendim çekeceğim.'}</span>
             <div class="cue-time"><span data-time></span></div>
           </div>
@@ -111,6 +119,7 @@ export function mount(view, { game, navigate }) {
       const warn = scene.querySelector('[data-warn]');
       if (def.voice) announcer.say(def.voice);
       sfx.whoosh();
+      cam.look.hold(g.fx[g.k]);
 
       const snap = async (viaCount) => {
         if (done) return;
@@ -120,7 +129,7 @@ export function mount(view, { game, navigate }) {
         if (viaCount) await countdown(scene, life, { final: 'Çek!', voice: 'booth-go', step: 650 });
         else announcer.say('booth-go');
         if (stage.scene !== scene) return;
-        const img = cam.frameShot();
+        const img = cam.frameShot({ fx: true });
         cam.flash();
         if (img) g.photos.push({ img, cap: def.name, by: `${nameOf(0)} & ${nameOf(1)}`, color: '#ff5fa2' });
         // Çekilen kare köşede bir an görünür
@@ -176,6 +185,7 @@ export function mount(view, { game, navigate }) {
   }
 
   function final() {
+    cam.look.release();
     g.over = true;
     cam.onFrame = null;
     cam.draw = null;

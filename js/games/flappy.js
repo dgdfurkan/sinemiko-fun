@@ -73,7 +73,7 @@ async function round(ctx) {
   m.base = base.map((b) => (b ? b.v : 0.05));
   hideTop(scene);
   m.running = true;
-  m.started = performance.now();
+  m.started = ctx.now();
   m.nextPipe = m.started + 1600;
   m.onEnd = () => endRound(ctx, need);
 }
@@ -116,7 +116,7 @@ function draw(ctx, g, players, dt, t) {
   if (!m || m.over || !m.birds) return;
   const W = cam.W;
   const H = cam.H;
-  const now = performance.now();
+  const now = ctx.now();
   const speed = 0.25 + Math.min(0.12, (m.running ? (now - m.started) / 1000 : 0) * 0.0025);
   const gapH = Math.max(0.26, 0.36 - (m.running ? (now - m.started) / 1000 : 0) * 0.0015);
   const pw = 0.08;

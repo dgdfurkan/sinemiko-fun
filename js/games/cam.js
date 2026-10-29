@@ -1,12 +1,15 @@
 // Kamera oyunlarının ortak kabuğu: kamera kartı, çizim katmanı, yükleme ve oyuncu bekleme sahneleri
 
-import { html } from '../lib/dom.js';
+import { html, toHTML } from '../lib/dom.js';
 import { nameOf } from '../lib/store.js';
 import { icon } from '../ui/icons.js';
 import { PLAYER_COLORS } from '../ui/avatar.js';
 import { sfx } from '../audio/sfx.js';
 import { announcer } from '../audio/announcer.js';
+import { store } from '../lib/store.js';
+import { toast } from '../ui/overlay.js';
 import { getTask, openCamera, closeCamera, camErrorText, Tracker } from '../vision/vision.js';
+import { makeLook } from './camfx.js';
 
 export const PCOL = PLAYER_COLORS;
 
@@ -15,6 +18,8 @@ export function camShell(view, cls) {
     <section class="screen game game-cam ${cls}">
       <div class="cam-wrap"><div class="cam-card"><video class="cam-video" playsinline muted></video><canvas class="cam-overlay"></canvas><div class="cam-flash"></div></div></div>
       <div class="stage cam-stage"></div>
+      <div class="cam-lost" hidden></div>
+      <button class="cam-fxbtn ${store.get('camFx') === false ? 'off' : ''}" type="button" aria-label="Sürpriz efektler" title="Sürpriz efektler">${toHTML(icon('sparkle'))}<span>Efektler</span></button>
     </section>`;
   const root = view.querySelector('.game-cam');
   return {
@@ -23,6 +28,8 @@ export function camShell(view, cls) {
     video: root.querySelector('.cam-video'),
     canvas: root.querySelector('.cam-overlay'),
     stageEl: root.querySelector('.cam-stage'),
+    lost: root.querySelector('.cam-lost'),
+    fxBtn: root.querySelector('.cam-fxbtn'),
   };
 }
 
@@ -39,9 +46,21 @@ export function camController(shell, life) {
     onFrame: null,
     leftIs: 0,
     on: false,
+    paused: false,
     W: 0,
     H: 0,
   };
+  // Sürpriz efektler: oyun sahnelerinde ara ara kendiliğinden gelir
+  cam.look = makeLook(cam, shell);
+  const fxBtn = shell.fxBtn;
+  const onFx = () => {
+    const on = cam.look.toggle();
+    fxBtn.classList.toggle('off', !on);
+    sfx.soft();
+    toast(on ? 'Sürpriz efektler açık: oyun sırasında ara ara gelir.' : 'Sürpriz efektler kapalı.', { tone: on ? 'pink' : '' });
+  };
+  fxBtn.addEventListener('click', onFx);
+  life.add(() => fxBtn.removeEventListener('click', onFx));
   let dpr = 1;
   const resize = () => {
     const r = card.getBoundingClientRect();
@@ -59,6 +78,7 @@ export function camController(shell, life) {
     const cur = stageEl.lastElementChild;
     const dim = !!cur && !cur.classList.contains('hud');
     root.classList.toggle('cam-dim', dim);
+    cam.look.setAuto(!dim && cam.on);
     // Sonuç ekranlarında takip durur; ana iş parçacığı boşalır, düğmeler anında tepki verir
     if (cam.tracker) {
       if (dim) cam.tracker.stop();
@@ -80,13 +100,24 @@ export function camController(shell, life) {
     lastT = t;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, cam.W, cam.H);
+    try {
+      cam.look.under(g, cam.players, dt, t);
+    } catch (err) {
+      console.error(err);
+    }
     if (cam.draw) {
       try {
-        cam.draw(g, cam.players, dt, t);
+        // Oyun duraklatılınca çizim sürer ama zaman akmaz
+        cam.draw(g, cam.players, cam.paused ? 0 : dt, t);
       } catch (err) {
         console.error(err);
         cam.draw = null;
       }
+    }
+    try {
+      cam.look.over(g, cam.players, dt, t);
+    } catch (err) {
+      console.error(err);
     }
     raf = requestAnimationFrame(loop);
   };
@@ -123,7 +154,7 @@ export function camController(shell, life) {
       onFrame: (players, now) => {
         cam.players = players;
         players.forEach((p, i) => { if (p) cam.seen[i] = now; });
-        if (cam.onFrame) {
+        if (cam.onFrame && !cam.paused) {
           try {
             cam.onFrame(players, now);
           } catch (err) {
@@ -149,6 +180,9 @@ export function camController(shell, life) {
   cam.sideOf = (i) => (i === cam.leftIs ? 1 : -1);
 
   cam.visible = (i, ms = 600) => performance.now() - cam.seen[i] < ms;
+
+  // Ortamın ışığı (0-1): model karanlıkta zorlanır, oyuncuya söylenir
+  cam.light = () => (cam.tracker && typeof cam.tracker.light === 'number' ? cam.tracker.light : 0.5);
 
   // Normalize kamera koordinatı → ekran koordinatı (konfeti için)
   cam.client = (nx, ny) => {
@@ -209,7 +243,8 @@ export function camController(shell, life) {
   };
 
   // Kadrajın tamamı, aynalı ve tam çözünürlükte (fotoğraf kabini için)
-  cam.frameShot = () => {
+  // fx: o anki efekt (renk filtresi, dev kafa, kedi kulağı...) fotoğrafa da işlenir
+  cam.frameShot = ({ fx = false } = {}) => {
     if (!video.videoWidth) return null;
     const out = document.createElement('canvas');
     out.width = video.videoWidth;
@@ -217,12 +252,26 @@ export function camController(shell, life) {
     const og = out.getContext('2d');
     og.translate(out.width, 0);
     og.scale(-1, 1);
+    if (fx && video.style.filter && 'filter' in og) og.filter = video.style.filter;
     og.drawImage(video, 0, 0);
+    og.setTransform(1, 0, 0, 1, 0, 0);
+    if ('filter' in og) og.filter = 'none';
+    if (fx && cam.W) {
+      og.save();
+      og.scale(out.width / cam.W, out.height / cam.H);
+      try {
+        cam.look.paint(og, cam.players, performance.now());
+      } catch (err) {
+        console.error(err);
+      }
+      og.restore();
+    }
     return out.toDataURL('image/jpeg', 0.92);
   };
 
   life.add(() => {
     announcer.stop();
+    cam.look.dispose();
     cancelAnimationFrame(raf);
     ro.disconnect();
     mo.disconnect();
@@ -290,6 +339,7 @@ export function waitPlayers(stage, life, cam, { title = 'Kadraja Geçin', tip = 
         <h2 class="t-big">${title}</h2>
         <p class="hud-tip"><b data-side>${sideText()}</b> ${tip}</p>
         <div class="cam-badges">${badge(0)}${badge(1)}</div>
+        <p class="cam-dark" data-dark hidden>${icon('sparkle')}Ortam karanlık. Işığı açın ya da ekran parlaklığını artırın, kamera sizi daha iyi görür.</p>
       </div>
     </div>
     <div class="hud-bottom" data-in>
@@ -304,12 +354,19 @@ export function waitPlayers(stage, life, cam, { title = 'Kadraja Geçin', tip = 
   }, { className: 'hud' });
   const btn = scene.querySelector('[data-act="ready"]');
   const badges = [...scene.querySelectorAll('[data-b]')];
+  const dark = scene.querySelector('[data-dark]');
   const shown = [null, null];
   const said = [null, null];
   // Vücut oyunlarında mesafe önerisi: omuz genişliği kadrajın yüksekliğine göre ölçülür
   const fit = (i) => {
     const p = cam.players[i];
-    if (cam.kind !== 'pose' || !p) return 'Hazır';
+    if (!p) return 'Hazır';
+    if (cam.kind === 'face') {
+      if (p.box.w < 0.075) return 'Biraz yaklaş';
+      if (p.box.x < 0.01 || p.box.x + p.box.w > 0.99) return 'Ortaya gel';
+      return 'Hazır';
+    }
+    if (cam.kind === 'hand') return 'Hazır';
     const lm = p.lm;
     const sw = Math.hypot((lm[11].x - lm[12].x) * p.ar, lm[11].y - lm[12].y);
     if (sw > 0.36 || lm[0].y < 0.1) return 'Bir adım geri';
@@ -328,6 +385,8 @@ export function waitPlayers(stage, life, cam, { title = 'Kadraja Geçin', tip = 
   const tick = () => {
     if (stage.scene !== scene || gone) return;
     const ok = [0, 1].map((i) => cam.visible(i));
+    const isDark = cam.light() < 0.17 && !(ok[0] && ok[1]);
+    if (dark.hidden === isDark) dark.hidden = !isDark;
     badges.forEach((b, i) => {
       const text = ok[i] ? fit(i) : 'Görünmüyor';
       if (said[i] !== text) {

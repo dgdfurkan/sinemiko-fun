@@ -7,11 +7,13 @@ const MODELS = {
   face: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
   // "full" model kalkan kolu, kısmen kadraj dışındaki eli ve yan yana iki kişiyi "lite"tan çok daha iyi bulur
   pose: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
+  hand: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
 };
 // Eşikler biraz düşük: kadraja zor sığan, yarısı görünen kişi de bulunsun; titreşimi süzgeç alır
 const OPTS = {
-  face: { numFaces: 2, outputFaceBlendshapes: true, minFaceDetectionConfidence: 0.45, minFacePresenceConfidence: 0.45, minTrackingConfidence: 0.45 },
-  pose: { numPoses: 2, minPoseDetectionConfidence: 0.4, minPosePresenceConfidence: 0.4, minTrackingConfidence: 0.4 },
+  face: { numFaces: 2, outputFaceBlendshapes: true, minFaceDetectionConfidence: 0.4, minFacePresenceConfidence: 0.4, minTrackingConfidence: 0.4 },
+  pose: { numPoses: 2, minPoseDetectionConfidence: 0.35, minPosePresenceConfidence: 0.35, minTrackingConfidence: 0.35 },
+  hand: { numHands: 4, minHandDetectionConfidence: 0.45, minHandPresenceConfidence: 0.45, minTrackingConfidence: 0.4 },
 };
 // Modele giden kare: 1280x720 hem doğru hem hızlı; tam çözünürlük yalnızca fotoğraflar için
 const INFER_W = 1280;
@@ -82,7 +84,10 @@ function fromTask(kind, res) {
       people.push({ lm: lm.map((p) => ({ x: p.x, y: p.y, z: p.z, v: p.visibility ?? 1 })), blend });
     });
   } else {
-    (res.landmarks || []).forEach((lm) => people.push({ lm: lm.map((p) => ({ x: p.x, y: p.y, z: p.z, v: p.visibility ?? 1 })) }));
+    (res.landmarks || []).forEach((lm, i) => {
+      const hs = kind === 'hand' && res.handedness && res.handedness[i] && res.handedness[i][0];
+      people.push({ lm: lm.map((p) => ({ x: p.x, y: p.y, z: p.z, v: p.visibility ?? 1 })), score: hs ? hs.score : 1 });
+    });
   }
   return { people };
 }
@@ -130,8 +135,8 @@ function mainEngine(kind, tasks) {
 
 async function createMainTasks(kind, buf) {
   const { lib, fileset } = await loadLib();
-  const Cls = kind === 'face' ? lib.FaceLandmarker : lib.PoseLandmarker;
-  const one = kind === 'face' ? { ...OPTS.face, numFaces: 1 } : { ...OPTS.pose, numPoses: 1 };
+  const Cls = kind === 'face' ? lib.FaceLandmarker : kind === 'hand' ? lib.HandLandmarker : lib.PoseLandmarker;
+  const one = kind === 'face' ? { ...OPTS.face, numFaces: 1 } : kind === 'hand' ? { ...OPTS.hand, numHands: 2 } : { ...OPTS.pose, numPoses: 1 };
   const plan = [one, one];
   const make = (delegate, o) => Cls.createFromOptions(fileset, { baseOptions: { modelAssetBuffer: buf.slice(), delegate }, runningMode: 'VIDEO', ...o });
   const out = [];
@@ -183,9 +188,11 @@ function workerEngine(kind, buf) {
           blend = {};
           names.forEach((n, k) => { blend[n] = d.blend[k]; });
         }
-        return { lm, blend, part: d.part };
+        return { lm, blend, part: d.part, score: d.score };
       }),
       ms: m.ms,
+      light: m.light,
+      gain: m.gain,
     });
     const engine = {
       mode: 'worker',
@@ -224,7 +231,7 @@ function workerEngine(kind, buf) {
   });
 }
 
-// kind: 'face' en fazla iki yüz ve ifade puanları, 'pose' en fazla iki kişinin iskeleti
+// kind: 'face' en fazla iki yüz ve ifade puanları, 'pose' en fazla iki kişinin iskeleti, 'hand' iki kişinin elleri
 export function getTask(kind, onProgress = () => {}) {
   const mock = window.__sinemikoVisionMock;
   if (mock) return Promise.resolve(mockEngine(kind, mock(kind)));
@@ -336,7 +343,9 @@ function boxOf(lm) {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
 }
 
-const SMOOTH = { pose: [1.4, 6], face: [1.6, 4] };
+const SMOOTH = { pose: [1.4, 6], face: [1.6, 4], hand: [2.2, 8] };
+// Model bir iki kare kişiyi kaçırınca oyuncu hemen kaybolmaz; son hali kısa süre tutulur, oyunlar titremez
+const HOLD_MS = 320;
 
 // Kadraj aynalı gösterilir; soldaki kişi solda görünür. leftIs: solda duran oyuncu (0 ya da 1).
 // Kare yalnızca kamera yeni görüntü verince ve önceki sonuç gelmişse modele gider: kuyruk birikmez.
@@ -426,7 +435,12 @@ export class Tracker {
       this.stats.frames++;
       this.stats.ms += ms;
       this.stats.worst = Math.max(this.stats.worst, ms);
-      this.process(res.people || [], performance.now());
+      if (typeof res.light === 'number') {
+        this.light = res.light;
+        this.gain = res.gain || 1;
+      }
+      if (this.kind === 'hand') this.processHands(res.people || [], performance.now());
+      else this.process(res.people || [], performance.now());
     };
     // Sonuç gelmezse kare bırakılır, döngü kilitlenmez
     const guard = setTimeout(() => done(null), 1500);
@@ -443,6 +457,8 @@ export class Tracker {
   // Çizgi kameranın aynasız koordinatındadır; örtüşme aradaki boşluk kadar büyür.
   // İkisi birden görünmüyorsa çizgi birkaç olası yeri sırayla dener.
   split() {
+    // Ellerde kadraj ortadan bölünür: herkes ellerini kendi yarısında tutar, ortadaki çizgi ekranda görünür
+    if (this.kind === 'hand') return { s: 0.5, ov: 0.08 };
     const now = performance.now();
     const L = this.lastPos[this._left];
     const R = this.lastPos[1 - this._left];
@@ -496,6 +512,9 @@ export class Tracker {
           this.blends[i] = null;
           this.vis[i] = null;
         }
+        // Kısa kayıpta son hal tutulur
+        const prev = this.players[i];
+        if (prev && now - this.lastSeen[i] < HOLD_MS) out[i] = prev.held ? prev : { ...prev, held: true };
         continue;
       }
       const n = d.lm.length;
@@ -536,6 +555,76 @@ export class Tracker {
       // Omuzların ekrandaki en sol ve en sağ noktası: bölme çizgisi aradaki boşluğa konur
       const sh = this.kind === 'pose' ? [d.lm[11].x, d.lm[12].x] : [d.lm[234].x, d.lm[454].x];
       this.lastPos[i] = { cx: d.cx, cy: d.cy, x0: Math.min(...sh), x1: Math.max(...sh) };
+    }
+    this.players = out;
+    this.onFrame(out, now);
+  }
+
+  // Eller: her el kadrajın hangi yarısındaysa o yarıdaki oyuncunundur. Aynı el iki parçada bulunursa biri atılır.
+  // Her oyuncunun en fazla iki eli; eller bir önceki karedeki en yakın eliyle eşlenip süzülür
+  processHands(raw, now) {
+    const v = this.video;
+    const ar = v.videoWidth / v.videoHeight;
+    let hands = raw.map((d) => {
+      const lm = d.lm.map((p) => ({ x: 1 - p.x, y: p.y, z: p.z, v: 1 }));
+      const b = boxOf(lm);
+      return { lm, cx: b.cx, cy: b.cy, size: Math.hypot((lm[0].x - lm[9].x) * ar, lm[0].y - lm[9].y), score: d.score || 1 };
+    });
+    hands.sort((a, b) => b.score - a.score);
+    const kept = [];
+    for (const h of hands) {
+      if (!kept.some((k) => Math.hypot(k.lm[0].x - h.lm[0].x, k.lm[0].y - h.lm[0].y) < 0.05 && Math.hypot(k.cx - h.cx, k.cy - h.cy) < 0.06)) kept.push(h);
+    }
+    hands = kept;
+    if (!this.handF) this.handF = [[], []];
+    const out = [null, null];
+    for (let i = 0; i < 2; i++) {
+      const left = i === this._left;
+      const mine = hands.filter((h) => (left ? h.cx < 0.5 : h.cx >= 0.5)).slice(0, 2);
+      const prevF = this.handF[i].filter((f) => now - f.t < 450);
+      const nextF = [];
+      const list = mine.map((h) => {
+        let best = null;
+        let bd = 0.2;
+        for (const f of prevF) {
+          if (nextF.includes(f)) continue;
+          const dd = Math.hypot(f.cx - h.cx, f.cy - h.cy);
+          if (dd < bd) {
+            bd = dd;
+            best = f;
+          }
+        }
+        if (!best) {
+          const [mc, beta] = SMOOTH.hand;
+          best = { f: smoother(42, mc, beta) };
+        }
+        const flat = new Float32Array(42);
+        for (let k = 0; k < 21; k++) {
+          flat[k * 2] = h.lm[k].x;
+          flat[k * 2 + 1] = h.lm[k].y;
+        }
+        const s = best.f(flat, now);
+        const lm = h.lm.map((q, k) => ({ x: s[k * 2], y: s[k * 2 + 1], z: q.z, v: 1 }));
+        best.cx = h.cx;
+        best.cy = h.cy;
+        best.t = now;
+        nextF.push(best);
+        const b = boxOf(lm);
+        return { lm, box: b, cx: b.cx, cy: b.cy, size: h.size };
+      });
+      // Bu karede bulunmayan el kısa süre tutulur
+      for (const f of prevF) if (!nextF.includes(f) && now - f.t < 200) nextF.push(f);
+      this.handF[i] = nextF;
+      if (list.length) {
+        list.sort((a, b) => a.cx - b.cx);
+        const all = list.flatMap((h) => h.lm);
+        const box = boxOf(all);
+        out[i] = { hands: list, lm: list[0].lm, box, cx: box.cx, ar };
+        this.lastSeen[i] = now;
+      } else {
+        const prev = this.players[i];
+        if (prev && now - this.lastSeen[i] < HOLD_MS) out[i] = prev.held ? prev : { ...prev, held: true };
+      }
     }
     this.players = out;
     this.onFrame(out, now);

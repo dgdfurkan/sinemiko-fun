@@ -59,6 +59,9 @@ async function getStream() {
   return navigator.mediaDevices.getUserMedia(CONSTRAINTS);
 }
 
+// Canlı dinleyen oyunlar (perde, alkış) aynı mikrofon seçimini kullanır
+export const openMicStream = () => getStream();
+
 const stopStream = (stream) => {
   if (stream) stream.getTracks().forEach((t) => t.stop());
 };

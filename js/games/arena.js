@@ -192,6 +192,7 @@ export function camDuel(view, { game, navigate }, spec) {
   const cfg = { ...(spec.cfg || {}) };
   const fx = makeFx();
   life.add(() => scoreboard.hide());
+  cam.look.allowBig = !spec.noBig;
 
   const ctx = {
     life, stage, cam, shell, cfg, fx, game,
@@ -199,6 +200,10 @@ export function camDuel(view, { game, navigate }, spec) {
     album: [],
     // Puanlar burada hemen güncellenir; tabela rozet uçtuktan sonra yazar
     pts: [0, 0],
+    // Oyun saati: oyun duraklayınca durur. Doğma zamanları ve süreler buna göre hesaplanır
+    pausedMs: 0,
+    pauseAt: 0,
+    now: () => (cam.paused ? ctx.pauseAt : performance.now()) - ctx.pausedMs,
     // Oyuncunun kadrajda kendi yarısı: [x0, x1] (0-1)
     half: (i) => (i === cam.leftIs ? [0, 0.5] : [0.5, 1]),
     // Oyuncunun yüzünden ya da vücudundan albüme fotoğraf; aynı kişiden en fazla saniyede bir
@@ -230,6 +235,7 @@ export function camDuel(view, { game, navigate }, spec) {
         };
       }
       await countdown(scene, life, { final, voice });
+      ctx.counted = true;
       if (measure) cam.onFrame = prevFrame;
       if (!measure) return null;
       return samples.map((list) => {
@@ -240,13 +246,17 @@ export function camDuel(view, { game, navigate }, spec) {
       });
     },
     // Süre sayacı: clock öğesini günceller, son 5 saniyede tıklar
+    // Oyun duraklatılınca (biri kadrajdan çıkınca) süre de durur
     clock(el, secs, { onEnd, onTick } = {}) {
-      const t0 = performance.now();
+      let last = performance.now();
+      let left = secs;
       let shown = secs;
       let stopped = false;
       const id = life.interval(() => {
         if (stopped) return;
-        const left = Math.max(0, secs - (performance.now() - t0) / 1000);
+        const now = performance.now();
+        if (!cam.paused) left = Math.max(0, left - (now - last) / 1000);
+        last = now;
         const s = Math.ceil(left);
         if (onTick) onTick(left);
         if (s !== shown) {
@@ -267,7 +277,7 @@ export function camDuel(view, { game, navigate }, spec) {
           if (onEnd) onEnd();
         }
       }, 100);
-      return { stop: () => { stopped = true; clearInterval(id); }, elapsed: () => (performance.now() - t0) / 1000 };
+      return { stop: () => { stopped = true; clearInterval(id); }, elapsed: () => secs - left, left: () => left };
     },
     shake(px = 10) {
       shell.card.animate([{ transform: 'translate(0,0)' }, { transform: `translate(${-px}px,${px * 0.6}px)` }, { transform: `translate(${px * 0.8}px,${-px * 0.6}px)` }, { transform: 'translate(0,0)' }], { duration: 320 });
@@ -275,6 +285,14 @@ export function camDuel(view, { game, navigate }, spec) {
     // Puan ve uçan rozet; nx, ny rozetin çıktığı yer (0-1) ya da nx bir sayfa öğesi
     score(i, pts, nx, ny, { quiet = false } = {}) {
       ctx.pts[i] += pts;
+      // Puan anında kısa yakınlaşma, öndekinin başında taç
+      const now = performance.now();
+      if (pts > 0 && now - (ctx.lastPunch || 0) > 1500) {
+        ctx.lastPunch = now;
+        cam.look.punch(i, pts >= 2 ? 1.1 : 1.06);
+      }
+      // Başın üstünü kullanan oyunlarda taç oyunu kapatmasın
+      if (!spec.noBig) cam.look.crown = ctx.pts[0] === ctx.pts[1] ? -1 : ctx.pts[0] > ctx.pts[1] ? 0 : 1;
       const from = nx == null ? null : typeof nx === 'object' ? nx : cam.pointEl(nx, ny);
       scoreboard.add(i, pts, from, { quiet });
     },
@@ -284,9 +302,12 @@ export function camDuel(view, { game, navigate }, spec) {
       ctx.m.over = true;
       cam.onFrame = null;
       cam.draw = null;
+      setPaused(false);
+      cam.look.crown = -1;
       fx.clear();
       const { html: podium, winner } = versusFinaleHTML(ctx.pts, { lines: { tie: spec.tie || 'Berabere!' } });
-      announcer.winner(winner);
+      if (spec.coop) announcer.cheer();
+      else announcer.winner(winner);
       const album = ctx.album;
       album.forEach((a) => {
         if (!a.img && a.canvas) a.img = a.canvas.toDataURL('image/jpeg', 0.9);
@@ -311,8 +332,94 @@ export function camDuel(view, { game, navigate }, spec) {
     },
   };
 
+  /* Biri kadrajdan çıkınca oyun durur: süre işlemez, hareketler sayılmaz.
+     Geri gelince kısa bir an sonra kaldığı yerden devam eder. Takip bir türlü tutmazsa "Böyle Devam Et" */
+  const lostEl = shell.lost;
+  let lostSince = [0, 0];
+  let backSince = 0;
+  function setPaused(on, who = []) {
+    if (cam.paused === on && !on) return;
+    if (on && !cam.paused) ctx.pauseAt = performance.now();
+    if (!on && cam.paused) ctx.pausedMs += performance.now() - ctx.pauseAt;
+    cam.paused = on;
+    if (!on) {
+      lostEl.hidden = true;
+      return;
+    }
+    const names = who.map((i) => nameOf(i));
+    const title = who.length === 2 ? 'İkinizi de göremiyorum!' : `${names[0]} görünmüyor!`;
+    lostEl.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'cl-box';
+    const h = document.createElement('b');
+    h.textContent = title;
+    const tip = document.createElement('span');
+    tip.textContent = lostTip(who);
+    const sub = document.createElement('small');
+    sub.textContent = 'Oyun durdu, görününce kaldığı yerden devam eder.';
+    const skip = document.createElement('button');
+    skip.className = 'btn';
+    skip.type = 'button';
+    skip.textContent = 'Böyle Devam Et';
+    skip.addEventListener('click', () => {
+      ctx.noPause = true;
+      setPaused(false);
+    });
+    box.append(h, tip, sub, skip);
+    lostEl.append(box);
+    lostEl.hidden = false;
+    sfx.boing();
+  }
+  function lostTip(who) {
+    if (cam.light() < 0.17) return 'Ortam karanlık: ışığı açın, kamera sizi daha iyi görür.';
+    const i = who[0];
+    const lp = cam.tracker && cam.tracker.lastPos ? cam.tracker.lastPos[i] : null;
+    const x = lp ? 1 - lp.cx : 0.5;
+    if (spec.kind === 'hand') return 'Ellerinizi kameraya, kendi yarınızda gösterin.';
+    if (x < 0.14) return `${nameOf(i)}, biraz ortaya doğru kay.`;
+    if (x > 0.86) return `${nameOf(i)}, biraz ortaya doğru kay.`;
+    if (spec.kind === 'pose') return 'Başınız ve omuzlarınız kadrajda olsun; biraz geri yaslanın.';
+    return 'Yüzünüz kameraya dönük olsun; saç ya da el yüzü kapatmasın.';
+  }
+  const guard = () => {
+    const active = ctx.m && !ctx.m.over && ctx.counted && !ctx.noPause && stage.scene && stage.scene.classList.contains('hud');
+    if (!active) {
+      if (cam.paused) setPaused(false);
+      lostSince = [0, 0];
+      return;
+    }
+    const now = performance.now();
+    const limit = spec.kind === 'hand' ? 3500 : 1500;
+    const gone = [0, 1].filter((i) => {
+      if (cam.visible(i, 350)) {
+        lostSince[i] = 0;
+        return false;
+      }
+      if (!lostSince[i]) lostSince[i] = now;
+      return now - lostSince[i] > (cam.paused ? 0 : limit - 350);
+    });
+    if (!cam.paused && gone.length) {
+      setPaused(true, gone);
+      backSince = 0;
+    } else if (cam.paused) {
+      const back = [0, 1].every((i) => cam.visible(i, 250));
+      if (!back) backSince = 0;
+      else if (!backSince) backSince = now;
+      else if (now - backSince > 700) {
+        setPaused(false);
+        sfx.go();
+        fx.text(cam.W / 2, cam.H * 0.3, 'Devam!', '#2ed6a0', 34);
+      }
+    }
+  };
+  life.interval(guard, 120);
+  life.add(() => { cam.paused = false; });
+
   function lobby() {
     ctx.m = null;
+    ctx.counted = false;
+    ctx.noPause = false;
+    cam.look.crown = -1;
     cam.draw = null;
     cam.onFrame = null;
     scoreboard.hide();
@@ -332,6 +439,10 @@ export function camDuel(view, { game, navigate }, spec) {
 
   function ready() {
     ctx.m = null;
+    ctx.counted = false;
+    ctx.noPause = false;
+    cam.look.crown = -1;
+    setPaused(false);
     ctx.album = [];
     fx.clear();
     cam.onFrame = null;

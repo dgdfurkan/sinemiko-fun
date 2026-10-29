@@ -274,4 +274,75 @@ export const sfx = {
     hiss(c, { t: t0 + dur, dur: 1.1, vol: 0.14, type: 'highpass', f: 5200, attack: 0.003 });
     tone(c, { type: 'sine', f: 110, f2: 50, t: t0 + dur, dur: 0.35, vol: 0.3 });
   },
+  // Dramatik an: üç bakır vuruşu "dan dan daaan"
+  dramatic() {
+    const c = live(); if (!c) return;
+    const t = c.currentTime;
+    [[55, 0, 0.32], [54, 0.36, 0.32], [50, 0.74, 1.3]].forEach(([m, d, dur]) => {
+      tone(c, { type: 'sawtooth', f: mtof(m), t: t + d, dur, vol: 0.12, attack: 0.01 });
+      tone(c, { type: 'sawtooth', f: mtof(m - 12), t: t + d, dur, vol: 0.1, attack: 0.01 });
+      tone(c, { type: 'square', f: mtof(m + 7), t: t + d, dur: dur * 0.8, vol: 0.035, attack: 0.02 });
+    });
+    hiss(c, { t: t + 0.74, dur: 1.4, vol: 0.12, type: 'lowpass', f: 900, f2: 120, q: 0.4 });
+  },
+  // Plak cızırtısı: efekt değişiminde
+  scratch() {
+    const c = live(); if (!c) return;
+    const t = c.currentTime;
+    hiss(c, { t, dur: 0.14, vol: 0.22, f: 900, f2: 3600, q: 3, attack: 0.002 });
+    hiss(c, { t: t + 0.13, dur: 0.18, vol: 0.2, f: 3200, f2: 500, q: 3, attack: 0.002 });
+  },
+  zap() {
+    const c = live(); if (!c) return;
+    tone(c, { type: 'sawtooth', f: 1800, f2: 220, dur: 0.18, vol: 0.09, attack: 0.002 });
+    tone(c, { type: 'square', f: 900, f2: 120, dur: 0.14, vol: 0.05, attack: 0.002 });
+  },
+  splat() {
+    const c = live(); if (!c) return;
+    const t = c.currentTime;
+    hiss(c, { t, dur: 0.22, vol: 0.32, type: 'lowpass', f: 1800, f2: 300, q: 0.7, attack: 0.002 });
+    tone(c, { type: 'sine', f: 240, f2: 70, t, dur: 0.16, vol: 0.3, attack: 0.002 });
+  },
+  sizzle(dur = 0.25) {
+    const c = live(); if (!c) return;
+    hiss(c, { dur, vol: 0.06, type: 'highpass', f: 4200, q: 0.4, attack: 0.01 });
+  },
+  chomp() {
+    const c = live(); if (!c) return;
+    const t = c.currentTime;
+    tone(c, { type: 'square', f: 320, f2: 140, t, dur: 0.07, vol: 0.12, attack: 0.002 });
+    tone(c, { type: 'square', f: 300, f2: 120, t: t + 0.09, dur: 0.07, vol: 0.1, attack: 0.002 });
+  },
+  // Tek nota: melodi ve ritim oyunları için; m MIDI numarası
+  note(m, dur = 0.35, { type = 'triangle', vol = 0.16, when = 0 } = {}) {
+    const c = live(); if (!c) return;
+    const t = c.currentTime + when;
+    tone(c, { type, f: mtof(m), t, dur, vol, attack: 0.01 });
+    tone(c, { type: 'sine', f: mtof(m + 12), t, dur: dur * 0.6, vol: vol * 0.25, attack: 0.01 });
+  },
+  clap(when = 0) {
+    const c = live(); if (!c) return;
+    const t = c.currentTime + when;
+    for (let k = 0; k < 3; k++) hiss(c, { t: t + k * 0.011, dur: 0.05, vol: 0.2, f: 1300, q: 0.9, attack: 0.001 });
+    hiss(c, { t: t + 0.03, dur: 0.16, vol: 0.12, f: 1100, q: 0.7, attack: 0.002 });
+  },
+  kick(when = 0) {
+    const c = live(); if (!c) return;
+    const t = c.currentTime + when;
+    tone(c, { type: 'sine', f: 150, f2: 45, t, dur: 0.22, vol: 0.45, attack: 0.002 });
+  },
+  hat(when = 0) {
+    const c = live(); if (!c) return;
+    hiss(c, { t: c.currentTime + when, dur: 0.04, vol: 0.06, type: 'highpass', f: 7000, attack: 0.001 });
+  },
+  // Motor ve süzülme: klavye oyunlarında çarpışma
+  thud(power = 1) {
+    const c = live(); if (!c) return;
+    tone(c, { type: 'sine', f: 120 + 60 * power, f2: 50, dur: 0.14, vol: 0.18 + 0.2 * Math.min(1, power), attack: 0.002 });
+    hiss(c, { dur: 0.08, vol: 0.08 * power, type: 'lowpass', f: 1200, attack: 0.002 });
+  },
+  rise(dur = 0.6) {
+    const c = live(); if (!c) return;
+    tone(c, { type: 'triangle', f: 300, f2: 1400, dur, vol: 0.08, attack: 0.05 });
+  },
 };

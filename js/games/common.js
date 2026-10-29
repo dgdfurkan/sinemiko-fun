@@ -81,14 +81,15 @@ export function celebrate() {
 }
 
 // İki oyunculu final: kazanan taçlı ve büyük, berabere ise ikisi de taçlı
-export function versusFinaleHTML(scores, { lines = {} } = {}) {
+// labels verilirse kürsüde puan yerine bu yazılar görünür (ör. süre, nota)
+export function versusFinaleHTML(scores, { lines = {}, labels = null } = {}) {
   const [a, b] = scores;
   const winner = a === b ? -1 : a > b ? 0 : 1;
   const pod = (i) => {
     const win = winner === -1 || winner === i;
     return html`<div class="pod p${i} ${winner === i ? 'win' : ''}">
       ${avatar(i, win ? { mood: 'laugh', eyes: 'happy', pose: 'cheer', props: 'crown' } : { mood: 'smirk', props: 'sweat' })}
-      <span class="pod-score">${scores[i]}</span>
+      <span class="pod-score">${labels ? labels[i] : scores[i]}</span>
       <span class="duo-name ${i ? 'name-p2' : 'name-p1'}">${nameOf(i)}</span>
     </div>`;
   };

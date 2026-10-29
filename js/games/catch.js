@@ -101,6 +101,7 @@ export function mount(view, opts) {
   return camDuel(view, opts, {
     cls: 'game-catch',
     kind: 'face',
+    noBig: true,
     cfg: { secs: '45' },
     rules: [
       'Yan yana oturun. Ekranın iki yarısına aynı anda yiyecekler yağar, herkes kendi yarısını toplar.',
@@ -139,7 +140,7 @@ async function play(ctx) {
   if (!ctx.life.alive || m.over) return;
   m.base = base.map((b) => clamp(b ? b.jaw : 0.05, 0, 0.3));
   m.running = true;
-  m.t0 = performance.now();
+  m.t0 = ctx.now();
   ctx.clock(clockEl, secs, {
     onEnd: () => {
       m.running = false;
@@ -173,10 +174,10 @@ function draw(ctx, g, players, dt, t) {
   const H = cam.H;
   const r = H * 0.045;
   if (m.running) {
-    const progress = Math.min(1, (performance.now() - m.t0) / 1000 / Number(ctx.cfg.secs));
-    if (t >= m.spawnAt) {
+    const progress = Math.min(1, (ctx.now() - m.t0) / 1000 / Number(ctx.cfg.secs));
+    if (ctx.now() >= m.spawnAt) {
       spawn(ctx, progress);
-      m.spawnAt = t + rand(900, 1300) * (1 - progress * 0.35);
+      m.spawnAt = ctx.now() + rand(900, 1300) * (1 - progress * 0.35);
     }
   }
   // Ağızlar

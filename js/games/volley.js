@@ -153,7 +153,7 @@ function step(ctx, b, h, W, H, AR) {
     }
   }
   // El vuruşu: yalnızca kendi tarafında; el hızının bir kısmı balona geçer
-  const now = performance.now();
+  const now = ctx.now();
   for (const i of [0, 1]) {
     if (now < m.cool[i]) continue;
     const [x0, x1] = ctx.half(i);

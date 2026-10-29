@@ -21,8 +21,10 @@ const TILTS = ['-1.4deg', '1.2deg', '-.8deg', '1.6deg', '.9deg', '-1.5deg', '1de
 // Sekmeye göre yerleşim: öne çıkan kart, uzun açıklama ve ızgara biçimi
 const LAYOUT = {
   all: { featured: false, roomy: false },
+  yeni: { featured: false, roomy: true },
   kamera: { featured: false, roomy: true },
   ses: { featured: true, roomy: false },
+  klavye: { featured: false, roomy: true },
   yarisma: { featured: false, roomy: true },
   ikimiz: { featured: true, roomy: false },
 };
@@ -45,7 +47,7 @@ function cardHTML(g, i, tab) {
     </button>`;
 }
 
-const gamesOf = (tab) => (tab === 'all' ? GAMES : GAMES.filter((g) => g.cat === tab));
+const gamesOf = (tab) => (tab === 'all' ? GAMES : tab === 'yeni' ? GAMES.filter((g) => g.isNew) : GAMES.filter((g) => g.cat === tab));
 
 const tabsHTML = (cur) => html`
   <div class="home-tabs ctl" role="tablist" aria-label="Oyun kategorileri">
@@ -80,7 +82,7 @@ export function mountHome(view, { navigate }) {
   const grid = root.querySelector('.home-grid');
   const tabs = root.querySelector('.home-tabs');
   const thumb = tabs.querySelector('.ht-thumb');
-  const TAB_COLORS = { all: '#ff5fa2', kamera: '#7a5cff', ses: '#ff9f1c', yarisma: '#4fb6ff', ikimiz: '#ff4f62' };
+  const TAB_COLORS = { all: '#ff5fa2', yeni: '#ffb31a', kamera: '#7a5cff', ses: '#ff9f1c', klavye: '#19b7c8', yarisma: '#4fb6ff', ikimiz: '#ff4f62' };
   const placeThumb = (instant) => {
     const on = tabs.querySelector('.ht.on');
     if (!on) return;

@@ -89,6 +89,7 @@ export function mount(view, opts) {
   return camDuel(view, opts, {
     cls: 'game-nose',
     kind: 'face',
+    noBig: true,
     cfg: { rounds: '3' },
     rules: [
       'İkinizin önünde aynı şekil belirir. Burnun bir kalem gibi: başını oynattıkça imleç de oynar.',
@@ -161,7 +162,7 @@ async function round(ctx) {
   hideTop(scene);
   clockEl.hidden = false;
   m.running = true;
-  m.t0 = performance.now();
+  m.t0 = ctx.now();
   m.timer = ctx.clock(clockEl, ROUND_SEC, { onEnd: () => endRound(ctx) });
 }
 
@@ -268,7 +269,7 @@ function advance(ctx, i, a, P, x, y) {
   m.prog[i] = got + 1;
   if (m.prog[i] % 6 === 0) sfx.pop(0.9 + (m.prog[i] / dots.length) * 0.8);
   if (m.prog[i] >= dots.length) {
-    m.done[i] = performance.now();
+    m.done[i] = ctx.now();
     m.times[i].push((m.done[i] - m.t0) / 1000);
     sfx.success();
     fx.burst(x, y, { n: 30, colors: [PCOL[i], '#ffcd3c', '#fff'], power: 420, shape: 'star' });

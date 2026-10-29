@@ -524,6 +524,134 @@
           "Ay, çok acı!"
         ]
       ]
+    },
+    {
+      "id": "duello4",
+      "note": "Cheerful start calls for cute couple mini games. Each call is an energetic, smiling invitation, said clearly and fully, with a short playful lift at the end.",
+      "lines": [
+        [
+          "go-boya",
+          "Boya bakalım!"
+        ],
+        [
+          "go-yilan",
+          "Kay bakalım!"
+        ],
+        [
+          "go-sektir",
+          "Sektir bakalım!"
+        ],
+        [
+          "go-hokey",
+          "Vur bakalım!"
+        ],
+        [
+          "go-kos",
+          "Koş bakalım!"
+        ],
+        [
+          "go-ates",
+          "Ateşle bakalım!"
+        ],
+        [
+          "go-sakiz",
+          "Şişir bakalım!"
+        ],
+        [
+          "go-salla",
+          "Salla bakalım!"
+        ],
+        [
+          "go-kartopu",
+          "At bakalım!"
+        ],
+        [
+          "go-sap",
+          "Şaplat bakalım!"
+        ],
+        [
+          "go-dans",
+          "Dans başlasın!"
+        ],
+        [
+          "go-takim",
+          "Hadi takım!"
+        ],
+        [
+          "go-duvar",
+          "Duvar geliyor!"
+        ],
+        [
+          "go-hesap",
+          "Hesapla bakalım!"
+        ],
+        [
+          "go-isaret",
+          "Göster bakalım!"
+        ],
+        [
+          "go-yakala",
+          "Yakala bakalım!"
+        ],
+        [
+          "go-it",
+          "İt bakalım!"
+        ],
+        [
+          "go-zipla",
+          "Zıpla bakalım!"
+        ]
+      ]
+    },
+    {
+      "id": "duello5",
+      "note": "Quick reactions during cute couple duels. Joyful cheers burst with excitement; the funny fails are dramatic and teasing with a soft laugh. Say every word clearly.",
+      "lines": [
+        [
+          "gol",
+          "Gol oldu, gol!"
+        ],
+        [
+          "burnt",
+          "Eyvah, kömür oldu!"
+        ],
+        [
+          "perfect",
+          "Tam kıvamında!"
+        ],
+        [
+          "pop-gum",
+          "Pat! Yüzüne yapıştı!"
+        ],
+        [
+          "dogru",
+          "Doğru cevap!"
+        ],
+        [
+          "yanlis",
+          "Yanlış cevap!"
+        ],
+        [
+          "snow-hit",
+          "Tam suratına!"
+        ],
+        [
+          "snow-block",
+          "Savuşturdu!"
+        ],
+        [
+          "bee",
+          "Ayy, arı soktu!"
+        ],
+        [
+          "combo",
+          "Süper seri!"
+        ],
+        [
+          "bonk",
+          "Ah, duvara çarptı!"
+        ]
+      ]
     }
   ]
 }

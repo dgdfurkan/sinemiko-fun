@@ -80,7 +80,7 @@ async function play(ctx) {
   await ctx.countdown(scene, { final: 'Kes!', voice: 'go-kes' });
   if (!ctx.life.alive || m.over) return;
   m.running = true;
-  m.t0 = performance.now();
+  m.t0 = ctx.now();
   ctx.clock(clockEl, secs, {
     onEnd: () => {
       m.running = false;
@@ -115,7 +115,7 @@ function draw(ctx, g, players, dt, t) {
   const W = cam.W;
   const H = cam.H;
   const R = H * 0.055;
-  const now = performance.now();
+  const now = ctx.now();
   players.forEach((p, i) => { if (p) drawSkeleton(g, cam, p, i, { alpha: 0.4, label: '', trail: false }); });
   if (m.running) {
     const progress = Math.min(1, (now - m.t0) / 1000 / Number(ctx.cfg.secs));

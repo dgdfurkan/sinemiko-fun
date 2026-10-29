@@ -2,6 +2,7 @@
 
 import { html, raw } from '../lib/dom.js';
 import { avatar } from '../ui/avatar.js';
+import { ART2 } from './art2.js';
 
 const I = 'stroke="#2a1636" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"';
 
@@ -500,4 +501,4 @@ export const ART = {
 
 const likelyArt = () => html`<span class="art art-duo">${avatar(0, { pose: 'point-r', mood: 'smirk' })}<span class="lq">?</span>${avatar(1, { pose: 'point-l', mood: 'smirk' })}</span>`;
 
-export const artFor = (id) => (id === 'likely' ? likelyArt() : raw(ART[id] || ''));
+export const artFor = (id) => (id === 'likely' ? likelyArt() : raw(ART[id] || ART2[id] || ''));

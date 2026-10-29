@@ -33,6 +33,7 @@ function load() {
     maskVol: num(saved.maskVol, 0.7),
     homeTab: typeof saved.homeTab === 'string' ? saved.homeTab : 'all',
     introSeen: bool(saved.introSeen, false),
+    camFx: bool(saved.camFx, true),
     best: { ...best },
   };
 }
